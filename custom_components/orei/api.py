@@ -55,12 +55,14 @@ class OreiMatrixClient:
     call methods concurrently.
     """
 
-    def __init__(self, serial_port: str) -> None:
+    def __init__(self, serial_port: str, baudrate: int | None = None) -> None:
         """
         Initialize the client.
 
         Args:
             serial_port: Path to the serial device (e.g. /dev/ttyUSB0).
+            baudrate: Optional baudrate to use for the serial connection. If
+                not provided the module-level default `BAUDRATE` is used.
 
         """
         self.serial_port = serial_port
@@ -69,6 +71,8 @@ class OreiMatrixClient:
         self._reader: Any | None = None
         self._writer: Any | None = None
         self._lock = asyncio.Lock()
+        # Allow overriding the default baudrate from constants via init
+        self.baudrate = int(baudrate) if baudrate is not None else BAUDRATE
 
     async def connect(self) -> None:
         """Open the serial connection if not already open."""
@@ -78,7 +82,7 @@ class OreiMatrixClient:
         try:
             self._reader, self._writer = await serial_asyncio.open_serial_connection(
                 url=self.serial_port,
-                baudrate=BAUDRATE,
+                baudrate=self.baudrate,
                 bytesize=BYTESIZE,
                 parity=PARITY,
                 stopbits=STOPBITS,

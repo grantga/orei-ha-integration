@@ -12,6 +12,8 @@ from .api import (
     OreiSerialConnectionError,
 )
 from .const import (
+    BAUDRATE,
+    CONF_BAUDRATE,
     CONF_SERIAL_PORT,
     DEFAULT_SERIAL_PORT,
     DOMAIN,
@@ -36,6 +38,7 @@ class OreiFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             try:
                 client = OreiMatrixClient(
                     serial_port=user_input[CONF_SERIAL_PORT],
+                    baudrate=int(user_input.get(CONF_BAUDRATE, BAUDRATE)),
                 )
                 # Test the connection
                 await client.test_connection()
@@ -69,6 +72,17 @@ class OreiFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                     ): selector.TextSelector(
                         selector.TextSelectorConfig(
                             type=selector.TextSelectorType.TEXT,
+                        ),
+                    ),
+                    vol.Required(
+                        CONF_BAUDRATE,
+                        default=(user_input or {}).get(CONF_BAUDRATE, BAUDRATE),
+                    ): selector.NumberSelector(
+                        selector.NumberSelectorConfig(
+                            mode=selector.NumberSelectorMode.BOX,
+                            min=9600,
+                            max=115200,
+                            step=1,
                         ),
                     ),
                 },

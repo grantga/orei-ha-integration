@@ -11,7 +11,8 @@ MODEL = "UHD-401MV"
 
 # Configuration constants
 CONF_SERIAL_PORT = "serial_port"
-DEFAULT_SERIAL_PORT = "/dev/ttyUSB"
+DEFAULT_SERIAL_PORT = "/dev/ttyUSB0"
+CONF_BAUDRATE = "baudrate"
 
 # Serial Protocol Constants
 BAUDRATE = 115200
