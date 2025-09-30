@@ -1,6 +1,6 @@
 {
   "domain": "integration_blueprint",
-  "name": "Integration blueprint",
+  "name": "orei",
   "codeowners": [
     "@ludeeus"
   ],
