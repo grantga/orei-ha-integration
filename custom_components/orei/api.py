@@ -115,9 +115,8 @@ class OreiMatrixClient:
 
         async with self._lock:
             try:
-                data = command.encode()
-                LOGGER.debug("Serial write to %s: %s", self.serial_port, data.hex())
-                self._writer.write(data)
+                LOGGER.debug("Serial write to %s: %s", self.serial_port, command)
+                self._writer.write(command)
                 await self._writer.drain()
             except serial.SerialException as exc:
                 LOGGER.exception("Serial write failed: %s", exc)
