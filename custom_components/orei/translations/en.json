@@ -2,7 +2,7 @@
     "config": {
         "step": {
             "user": {
-                "description": "Enter the USB serial port the OREI is connected to and baudrate (default=115200).",
+                "description": "Enter the USB serial port the OREI is connected to and baudrate (default=115200)."
             }
         },
         "abort": {
