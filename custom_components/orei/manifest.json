@@ -1,6 +1,6 @@
 {
-  "domain": "integration_blueprint",
-  "name": "orei",
+  "domain": "orei",
+  "name": "uhd401mv",
   "codeowners": [
     "@ludeeus"
   ],
