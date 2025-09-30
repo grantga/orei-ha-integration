@@ -1,46 +1,118 @@
-# Notice
+# OREI UHD-401MV Home Assistant integration (development)
 
-The component and platforms in this repository are not meant to be used by a
-user, but as a "blueprint" that custom component developers can build
-upon, to make more awesome stuff.
+This repository contains a Home Assistant custom integration that controls an
+OREI UHD-401MV HDMI matrix over a local RS-232 serial connection. The
+integration is implemented as a developer-focused example and includes a
+serial async client, entities (power switch / input select), a
+DataUpdateCoordinator, and a config flow for selecting the serial port.
 
-HAVE FUN! 😎
+This project is intended for development, testing, and as a blueprint for
+building similar local integrations. It is not a production-ready add-on for
+general distribution without additional testing and validation against real
+hardware.
 
-## Why?
+## Quick highlights
 
-This is simple, by having custom_components look (README + structure) the same
-it is easier for developers to help each other and for users to start using them.
+- Domain: `orei` (custom component under `custom_components/orei`)
+- Device: OREI UHD-401MV HDMI matrix (RS-232 ASCII protocol)
+- Serial library: `pyserial-asyncio` (declared in the integration manifest)
 
-If you are a developer and you want to add things to this "blueprint" that you think more
-developers will have use for, please open a PR to add it :)
+## Minimum repository layout
 
-## What?
+Path | Purpose
+-- | --
+`custom_components/orei/` | Integration source (async client, entities, coordinator, config flow)
+`config/` | Development Home Assistant configuration and logs (local dev only)
+`scripts/` | Helper scripts (develop, lint, setup)
+`requirements.txt` | Development/test dependencies
 
-This repository contains multiple files, here is a overview:
+## Quick start (development)
 
-File | Purpose | Documentation
--- | -- | --
-`.devcontainer.json` | Used for development/testing with Visual Studio Code. | [Documentation](https://code.visualstudio.com/docs/remote/containers)
-`.github/ISSUE_TEMPLATE/*.yml` | Templates for the issue tracker | [Documentation](https://help.github.com/en/github/building-a-strong-community/configuring-issue-templates-for-your-repository)
-`custom_components/integration_blueprint/*` | Integration files, this is where everything happens. | [Documentation](https://developers.home-assistant.io/docs/creating_component_index)
-`CONTRIBUTING.md` | Guidelines on how to contribute. | [Documentation](https://help.github.com/en/github/building-a-strong-community/setting-guidelines-for-repository-contributors)
-`LICENSE` | The license file for the project. | [Documentation](https://help.github.com/en/github/creating-cloning-and-archiving-repositories/licensing-a-repository)
-`README.md` | The file you are reading now, should contain info about the integration, installation and configuration instructions. | [Documentation](https://help.github.com/en/github/writing-on-github/basic-writing-and-formatting-syntax)
-`requirements.txt` | Python packages used for development/lint/testing this integration. | [Documentation](https://pip.pypa.io/en/stable/user_guide/#requirements-files)
+1. Open this repository in the provided VS Code devcontainer or a Python 3.11+ environment.
+2. Install developer dependencies listed in `requirements.txt` (or let the devcontainer handle it).
+3. Start the local Home Assistant dev environment using the included script:
 
-## How?
+```bash
+./scripts/develop
+```
 
-1. Create a new repository in GitHub, using this repository as a template by clicking the "Use this template" button in the GitHub UI.
-1. Open your new repository in Visual Studio Code devcontainer (Preferably with the "`Dev Containers: Clone Repository in Named Container Volume...`" option).
-1. Rename all instances of the `integration_blueprint` to `custom_components/<your_integration_domain>` (e.g. `custom_components/awesome_integration`).
-1. Rename all instances of the `orei` to `<Your Integration Name>` (e.g. `Awesome Integration`).
-1. Run the `scripts/develop` to start HA and test out your new integration.
+The `scripts/develop` script starts a Home Assistant process using the
+`config/` folder included in the repository. Tail the logs in the terminal to
+see startup messages and any integration errors.
 
-## Next steps
+## Notes on `configuration.yaml`
 
-These are some next steps you may want to look into:
-- Add tests to your integration, [`pytest-homeassistant-custom-component`](https://github.com/MatthewFlamm/pytest-homeassistant-custom-component) can help you get started.
-- Add brand images (logo/icon) to https://github.com/home-assistant/brands.
-- Create your first release.
-- Share your integration on the [Home Assistant Forum](https://community.home-assistant.io/).
-- Submit your integration to [HACS](https://hacs.xyz/docs/publish/start).
+- For development the repository includes `config/configuration.yaml`. It
+  intentionally does not use `default_config:` because that pulls in several
+  integrations which may expect host components (for example `go2rtc` which
+  may look for a Docker binary). If Home Assistant fails to start with errors
+  referencing `go2rtc`, edit `config/configuration.yaml` and avoid
+  `default_config:` — a minimal explicit list is provided in the file.
+
+## How the integration works (short)
+
+- `custom_components/orei/api.py` provides an async serial client that sends
+  ASCII commands terminated by CRLF and parses the device responses.
+- `coordinator.py` uses Home Assistant's `DataUpdateCoordinator` to poll the
+  matrix for power and input state and shares that state with entities.
+- `switch.py` implements a `SwitchEntity` to control the matrix power.
+- `select.py` implements a `SelectEntity` to change the active input on the matrix.
+
+## Troubleshooting: frontend stuck on "Loading data"
+
+If the Home Assistant web UI is stuck on "Loading data", common causes and
+checks are:
+
+- Look at `config/home-assistant.log` for ERROR/WARNING messages. Key
+  things to search for: "ERROR", "WARNING", "Traceback", "websocket",
+  "frontend", "unhandled exception", and "blocked".
+- Check for blocking synchronous I/O in custom integrations. If an integration
+  performs long blocking calls during setup or inside the coordinator update
+  callback, it can block the Home Assistant event loop and prevent the
+  frontend from loading.
+- Verify the HTTP server and websocket are bound and listening. If the HTTP
+  server fails to bind (port already in use), the frontend cannot connect.
+- Recorder / database issues (sqlite warnings) can slow or stall startup.
+
+If you see errors referencing the `orei` integration and the serial client,
+ensure the integration uses `asyncio` APIs (via `pyserial-asyncio`) and does
+not perform blocking `serial` calls on the event loop.
+
+## Testing and development guidance
+
+- Linting and formatting: use the repository `scripts/lint` script. The
+  devcontainer comes pre-configured for common tools used during development.
+- Unit tests: write pytest tests that mock `serial_asyncio` to simulate the
+  matrix responses. This is the preferred way to validate command formatting and
+  response parsing without hardware.
+- Hardware testing: when you have the UHD-401MV connected to your development
+  machine (via a serial adapter), configure the serial port in the integration
+  UI (or `configuration.yaml`) and verify that commands change inputs and power.
+
+## Important developer notes
+
+- Avoid long blocking synchronous calls in integration setup or in
+  coordinator update methods — they block the Home Assistant event loop and
+  can cause the frontend to show "Loading data" or fail to respond.
+- Prefer `asyncio` APIs and the project's `pyserial-asyncio` dependency.
+- Use explicit API methods (for example `power_on()` / `power_off()`) instead
+  of boolean positional arguments to make intent clear and to satisfy linters.
+
+## Running the project checks
+
+Run linting and tests in the workspace:
+
+```bash
+./scripts/lint
+pytest
+```
+
+## Contributing
+
+See `CONTRIBUTING.md` for the contribution workflow. Pull requests that add
+tests, documentation, and small focused improvements are welcome.
+
+## License
+
+This repository includes a `LICENSE` file. Please follow the stated license
+when reusing code from this project.
