@@ -115,7 +115,9 @@ class OreiMatrixClient:
 
         async with self._lock:
             try:
-                self._writer.write(command.encode())
+                data = command.encode()
+                LOGGER.debug("Serial write to %s: %s", self.serial_port, data.hex())
+                self._writer.write(data)
                 await self._writer.drain()
             except serial.SerialException as exc:
                 LOGGER.exception("Serial write failed: %s", exc)
@@ -127,14 +129,35 @@ class OreiMatrixClient:
         if not self._reader:
             msg = "No serial reader available"
             raise OreiSerialConnectionError(msg)
-
         try:
+            # Prefer readline which waits for a newline-terminated response.
             data = await asyncio.wait_for(self._reader.readline(), timeout=TIMEOUT)
-            return data.decode().strip()
-        except (TimeoutError, serial.SerialException) as exc:
+        except TimeoutError:
+            # Readline timed out — attempt a short-read fallback to capture
+            # devices that don't terminate responses with a newline or are slow.
+            LOGGER.debug(
+                "Readline timed out on %s, attempting short read fallback",
+                self.serial_port,
+            )
+            try:
+                data = await asyncio.wait_for(self._reader.read(256), timeout=0.2)
+            except Exception as exc2:
+                LOGGER.exception("Serial read failed: %s", exc2)
+                await self.disconnect()
+                raise OreiCommunicationError(str(exc2)) from exc2
+        except serial.SerialException as exc:
             LOGGER.exception("Serial read failed: %s", exc)
             await self.disconnect()
             raise OreiCommunicationError(str(exc)) from exc
+
+        if not data:
+            msg = "No data received from serial device"
+            LOGGER.debug(msg)
+            await self.disconnect()
+            raise OreiCommunicationError(msg)
+
+        LOGGER.debug("Serial raw response from %s: %s", self.serial_port, data.hex())
+        return data.decode(errors="replace").strip()
 
     async def test_connection(self) -> None:
         """Simple test used by the config flow to verify device is reachable."""
