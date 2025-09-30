@@ -1,25 +1,19 @@
-"""Custom types for integration_blueprint."""
+"""Custom types for OREI Matrix Switch."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import Final
 
-if TYPE_CHECKING:
-    from homeassistant.config_entries import ConfigEntry
-    from homeassistant.loader import Integration
+from .const import NUM_INPUTS
 
-    from .api import IntegrationBlueprintApiClient
-    from .coordinator import BlueprintDataUpdateCoordinator
-
-
-type IntegrationBlueprintConfigEntry = ConfigEntry[IntegrationBlueprintData]
+# Input options are fixed based on hardware
+VALID_INPUTS: Final = tuple(f"Input {i}" for i in range(1, NUM_INPUTS + 1))
 
 
 @dataclass
-class IntegrationBlueprintData:
-    """Data for the Blueprint integration."""
+class SwitchState:
+    """Switch state data."""
 
-    client: IntegrationBlueprintApiClient
-    coordinator: BlueprintDataUpdateCoordinator
-    integration: Integration
+    power: bool
+    input_number: int

@@ -1,12 +1,16 @@
 {
   "domain": "orei",
-  "name": "uhd401mv",
+  "name": "OREI UHD-401MV",
   "codeowners": [
-    "@ludeeus"
+    "@grantga"
   ],
   "config_flow": true,
-  "documentation": "https://github.com/ludeeus/integration_blueprint",
-  "iot_class": "cloud_polling",
-  "issue_tracker": "https://github.com/ludeeus/integration_blueprint/issues",
+  "dependencies": [],
+  "documentation": "https://cdn.shopify.com/s/files/1/1988/4253/files/UHD-401MV-Updated_User_Manual.pdf",
+  "homekit": {},
+  "iot_class": "local_polling",
+  "requirements": [
+    "pyserial-asyncio==0.6"
+  ],
   "version": "0.1.0"
 }

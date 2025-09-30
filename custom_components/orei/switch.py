@@ -1,67 +1,59 @@
-"""Switch platform for integration_blueprint."""
+"""Switch platform for OREI Matrix power control."""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
+from homeassistant.components.switch import SwitchEntity
 
-from .entity import IntegrationBlueprintEntity
+from .const import DOMAIN, LOGGER
+from .entity import OreiEntity
 
 if TYPE_CHECKING:
+    from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import HomeAssistant
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-    from .coordinator import BlueprintDataUpdateCoordinator
-    from .data import IntegrationBlueprintConfigEntry
-
-ENTITY_DESCRIPTIONS = (
-    SwitchEntityDescription(
-        key="integration_blueprint",
-        name="Integration Switch",
-        icon="mdi:format-quote-close",
-    ),
-)
+    from .coordinator import OreiDataUpdateCoordinator
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,  # noqa: ARG001 Unused function argument: `hass`
-    entry: IntegrationBlueprintConfigEntry,
+    hass: HomeAssistant,
+    entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up the switch platform."""
-    async_add_entities(
-        IntegrationBlueprintSwitch(
-            coordinator=entry.runtime_data.coordinator,
-            entity_description=entity_description,
-        )
-        for entity_description in ENTITY_DESCRIPTIONS
-    )
+    """Set up OREI Matrix Switch power control."""
+    coordinator = hass.data[DOMAIN][entry.entry_id]
+    async_add_entities([OreiPowerSwitch(coordinator)])
 
 
-class IntegrationBlueprintSwitch(IntegrationBlueprintEntity, SwitchEntity):
-    """integration_blueprint switch class."""
+class OreiPowerSwitch(OreiEntity, SwitchEntity):
+    """Representation of OREI Matrix Switch power control."""
 
-    def __init__(
-        self,
-        coordinator: BlueprintDataUpdateCoordinator,
-        entity_description: SwitchEntityDescription,
-    ) -> None:
-        """Initialize the switch class."""
+    _attr_name = "Power"
+    _attr_icon = "mdi:power"
+    _attr_has_entity_name = True
+
+    def __init__(self, coordinator: OreiDataUpdateCoordinator) -> None:
+        """Initialize the power switch."""
         super().__init__(coordinator)
-        self.entity_description = entity_description
+        self._attr_unique_id = f"{coordinator.client.serial_port}_power"
 
     @property
-    def is_on(self) -> bool:
+    def is_on(self) -> bool | None:
         """Return true if the switch is on."""
-        return self.coordinator.data.get("title", "") == "foo"
+        if not self.coordinator.data:
+            return None
+        return self.coordinator.data.power
 
     async def async_turn_on(self, **_: Any) -> None:
-        """Turn on the switch."""
-        await self.coordinator.config_entry.runtime_data.client.async_set_title("bar")
+        """Turn the matrix switch on."""
+        LOGGER.debug("Turning matrix switch on")
+        await self.coordinator.client.power_on()
         await self.coordinator.async_request_refresh()
 
     async def async_turn_off(self, **_: Any) -> None:
-        """Turn off the switch."""
-        await self.coordinator.config_entry.runtime_data.client.async_set_title("foo")
+        """Turn the matrix switch off."""
+        LOGGER.debug("Turning matrix switch off")
+        await self.coordinator.client.power_off()
         await self.coordinator.async_request_refresh()
