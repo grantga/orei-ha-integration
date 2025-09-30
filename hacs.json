@@ -1,5 +1,12 @@
 {
-    "name": "orei",
+    "name": "OREI UHD-401MV",
+    "content": [
+        "integration"
+    ],
     "homeassistant": "2025.2.4",
-    "hacs": "2.0.5"
+    "hacs": "2.0.5",
+    "filename": "custom_components/orei/manifest.json",
+    "zip_release": false,
+    "render_readme": true,
+    "country": "EN"
 }
