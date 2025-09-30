@@ -24,10 +24,10 @@ TIMEOUT = 1
 # Protocol Commands
 # e.g., "sw i1v1" switches input 1 to output 1
 CMD_SWITCH_INPUT = "sw i{input}v{output}\r\n"
-CMD_QUERY_INPUT = "r av{output}\r\n"  # e.g., "r av1" reads current input for output 1
-CMD_POWER_ON = "on\r\n"
-CMD_POWER_OFF = "off\r\n"
-CMD_QUERY_POWER = "r power\r\n"
+CMD_QUERY_INPUT = "r av{output}!\r\n"  # e.g., "r av1" reads current input for output 1
+CMD_POWER_ON = "s power 1!"
+CMD_POWER_OFF = "s power 2!"
+CMD_QUERY_POWER = "r power!"
 
 # Response patterns
 RESPONSE_INPUT = "av{output} from i{input}"  # e.g., "av1 from i1"
