@@ -31,8 +31,8 @@ CMD_QUERY_POWER = "r power!"
 
 # Response patterns
 RESPONSE_INPUT = "av{output} from i{input}"  # e.g., "av1 from i1"
-RESPONSE_POWER_ON = "on"
-RESPONSE_POWER_OFF = "off"
+RESPONSE_POWER_ON = "power on"
+RESPONSE_POWER_OFF = "power off"
 
 # Number of inputs/outputs
 NUM_INPUTS = 4
