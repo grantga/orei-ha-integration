@@ -22,15 +22,20 @@ STOPBITS = 1
 TIMEOUT = 1
 
 # Protocol Commands
-# e.g., "sw i1v1" switches input 1 to output 1
-CMD_SWITCH_INPUT = "sw i{input}v{output}\r\n"
-CMD_QUERY_INPUT = "r av{output}!\r\n"  # e.g., "r av1" reads current input for output 1
 CMD_POWER_ON = "s power 1!"
 CMD_POWER_OFF = "s power 2!"
 CMD_QUERY_POWER = "r power!"
 
+# Audio output command: set audio source for the (single) output.
+# Device expects: "s output audio x!" where x is 0..4
+CMD_SET_AUDIO_OUTPUT = "s output audio {source}!"
+
+# Query audio output source. Device responds with a text description such
+# as "output audio: follow window" or a message indicating which HDMI input is
+# selected. The command below requests the current audio source.
+CMD_QUERY_AUDIO_OUTPUT = "r output audio!"
+
 # Response patterns
-RESPONSE_INPUT = "av{output} from i{input}"  # e.g., "av1 from i1"
 RESPONSE_POWER_ON = "power on"
 RESPONSE_POWER_OFF = "power off"
 
@@ -38,4 +43,4 @@ RESPONSE_POWER_OFF = "power off"
 NUM_INPUTS = 4
 NUM_OUTPUTS = 1
 
-UPDATE_INTERVAL = 10  # seconds
+UPDATE_INTERVAL = 120  # seconds

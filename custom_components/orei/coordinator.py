@@ -26,8 +26,8 @@ class OreiMatrixData:
 
     # Whether the matrix switch is powered on
     power: bool
-    # Currently selected input source (1-4)
-    current_input: int
+    # Currently selected audio source (1-4)
+    current_audio_src: int
     # Future: EDID and lock state support
 
 
@@ -56,11 +56,11 @@ class OreiDataUpdateCoordinator(DataUpdateCoordinator[OreiMatrixData]):
         try:
             # Get current state
             power = await self.client.get_power_state()
-            current_input = await self.client.get_input()
+            current_audio_src = await self.client.get_audio_output()
 
             return OreiMatrixData(
                 power=power,
-                current_input=current_input,
+                current_audio_src=current_audio_src,
             )
 
         except OreiMatrixError as error:

@@ -20,9 +20,9 @@ from .const import (
     BYTESIZE,
     CMD_POWER_OFF,
     CMD_POWER_ON,
-    CMD_QUERY_INPUT,
+    CMD_QUERY_AUDIO_OUTPUT,
     CMD_QUERY_POWER,
-    CMD_SWITCH_INPUT,
+    CMD_SET_AUDIO_OUTPUT,
     LOGGER,
     NUM_INPUTS,
     NUM_OUTPUTS,
@@ -132,19 +132,6 @@ class OreiMatrixClient:
         try:
             # Prefer readline which waits for a newline-terminated response.
             data = await asyncio.wait_for(self._reader.readline(), timeout=TIMEOUT)
-        except TimeoutError:
-            # Readline timed out — attempt a short-read fallback to capture
-            # devices that don't terminate responses with a newline or are slow.
-            LOGGER.debug(
-                "Readline timed out on %s, attempting short read fallback",
-                self.serial_port,
-            )
-            try:
-                data = await asyncio.wait_for(self._reader.read(256), timeout=0.2)
-            except Exception as exc2:
-                LOGGER.exception("Serial read failed: %s", exc2)
-                await self.disconnect()
-                raise OreiCommunicationError(str(exc2)) from exc2
         except serial.SerialException as exc:
             LOGGER.exception("Serial read failed: %s", exc)
             await self.disconnect()
@@ -169,38 +156,48 @@ class OreiMatrixClient:
             # Wrap other errors as serial connection failure for config flow UX
             raise OreiSerialConnectionError(str(exc)) from exc
 
-    async def set_input(self, input_num: int, output_num: int = 1) -> None:
+    async def set_audio_output(self, source: int, output_num: int = 1) -> None:
         r"""
-        Switch an input to an output.
+        Set the audio output source for an output.
 
-        Validates ranges and sends the sw i{input}v{output}\r\n command.
+        source: 0..4 where 0 means "follow window selected source",
+        and 1..4 correspond to HDMI 1..4.
         """
-        if not 1 <= input_num <= NUM_INPUTS:
-            msg = f"Input must be between 1 and {NUM_INPUTS}"
+        if not 0 <= source <= NUM_INPUTS:
+            msg = f"Audio source must be between 0 and {NUM_INPUTS}"
             raise OreiMatrixError(msg)
         if not 1 <= output_num <= NUM_OUTPUTS:
             msg = f"Output must be between 1 and {NUM_OUTPUTS}"
             raise OreiMatrixError(msg)
 
-        cmd = CMD_SWITCH_INPUT.format(input=input_num, output=output_num)
+        cmd = CMD_SET_AUDIO_OUTPUT.format(source=source)
         await self._write_command(cmd)
 
-    async def get_input(self, output_num: int = 1) -> int:
-        """Query the currently selected input for an output and return it."""
-        if not 1 <= output_num <= NUM_OUTPUTS:
-            msg = f"Output must be between 1 and {NUM_OUTPUTS}"
-            raise OreiMatrixError(msg)
-
-        cmd = CMD_QUERY_INPUT.format(output=output_num)
-        await self._write_command(cmd)
+    async def get_audio_output(self) -> int:
+        """Return the current audio source (0=follow, 1..N=HDMI)."""
+        # Send query command and read single-line response
+        await self._write_command(CMD_QUERY_AUDIO_OUTPUT)
         response = await self._read_response()
 
-        # Expecting responses like: "av1 from i1"
-        try:
-            return int(response.split("from i")[1])
-        except (IndexError, ValueError) as exc:
-            msg = f"Invalid response format: {response}"
-            raise OreiMatrixError(msg) from exc
+        # Normalize to lower-case for parsing
+        resp = response.lower().strip()
+
+        # Try to find a digit 1..NUM_INPUTS in the response
+        for token in resp.split():
+            # Remove any non-digit prefix/suffix
+            digits = "".join(ch for ch in token if ch.isdigit())
+            if not digits:
+                continue
+            try:
+                val = int(digits)
+            except ValueError:
+                continue
+            if 1 <= val <= NUM_INPUTS:
+                return val
+
+        # If parsing fails, raise an error
+        msg = f"Invalid audio output response: {response}"
+        raise OreiMatrixError(msg)
 
     async def power_on(self) -> None:
         """Turn the device power on."""
