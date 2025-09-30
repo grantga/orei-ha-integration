@@ -1,4 +1,4 @@
-"""Select platform for OREI Matrix Switch input selection."""
+"""Select platform for OREI Matrix Switch audio output selection."""
 
 from __future__ import annotations
 
@@ -20,30 +20,30 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up OREI Matrix Switch input selection."""
+    """Set up OREI Matrix Switch audio output selection."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
-    async_add_entities([OreiInputSelect(coordinator)])
+    async_add_entities([OreiAudioOutputSelect(coordinator)])
 
 
-class OreiInputSelect(OreiCoordinatorEntity, SelectEntity):
-    """Representation of the OREI Matrix Switch input selection."""
+class OreiAudioOutputSelect(OreiCoordinatorEntity, SelectEntity):
+    """Representation of the OREI Matrix Switch audio output selection."""
 
     def __init__(self, coordinator: OreiDataUpdateCoordinator) -> None:
-        """Initialize the input selector."""
-        super().__init__(coordinator, "input")
-        self._attr_name = "Input Source"
-        self._attr_icon = "mdi:video-input-hdmi"
+        """Initialize the audio output selector."""
+        super().__init__(coordinator, "audio_output")
+        self._attr_name = "Audio Output Source"
+        self._attr_icon = "mdi:audio-input-hdmi"
         self._attr_options = [f"Input {i}" for i in range(1, NUM_INPUTS + 1)]
 
     @property
     def current_option(self) -> str | None:
-        """Return the current selected input."""
+        """Return the current selected audio src."""
         if not self.coordinator.data:
             return None
-        return f"Input {self.coordinator.data.current_input}"
+        return f"Input {self.coordinator.data.current_audio_src}"
 
     async def async_select_option(self, option: str) -> None:
-        """Change the selected input."""
+        """Change the selected audio ouput."""
         input_num = int(option.split()[-1])  # Extract number from "Input X"
-        await self.coordinator.client.set_input(input_num)
+        await self.coordinator.client.set_audio_output(input_num)
         await self.coordinator.async_request_refresh()
