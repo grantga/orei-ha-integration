@@ -92,6 +92,16 @@ SERVICE_SET_QUAD_MODE_SCHEMA = vol.Schema(
 )
 
 
+SERVICE_SET_TRIPLE_MODE = "set_triple_mode"
+
+SERVICE_SET_TRIPLE_MODE_SCHEMA = vol.Schema(
+    {
+        vol.Required("mode"): vol.All(int, vol.Range(min=1, max=2)),
+        vol.Optional("entry_id"): cv.string,
+    }
+)
+
+
 def _register_single_input_service(hass: HomeAssistant) -> None:
     """Register the set_single_input service if not already present."""
     if hass.services.async_services().get(DOMAIN, {}).get(SERVICE_SET_SINGLE_INPUT):
@@ -394,6 +404,41 @@ def _register_quad_mode_service(hass: HomeAssistant) -> None:
     )
 
 
+def _register_triple_mode_service(hass: HomeAssistant) -> None:
+    """Register the set_triple_mode service if not already present."""
+    if hass.services.async_services().get(DOMAIN, {}).get(SERVICE_SET_TRIPLE_MODE):
+        return
+
+    async def _async_set_triple_mode_service(call: ServiceCall) -> None:
+        data = call.data
+        mode = int(data["mode"])
+        entry_id = data.get("entry_id")
+
+        # Choose coordinator
+        if entry_id:
+            coord = hass.data[DOMAIN].get(entry_id)
+            if not coord:
+                msg = f"Config entry {entry_id} not found"
+                raise RuntimeError(msg)
+        else:
+            entries = list(hass.data[DOMAIN].values())
+            if len(entries) == 1:
+                coord = entries[0]
+            else:
+                msg = "More than one OREI config entry present; specify entry_id"
+                raise RuntimeError(msg)
+
+        await coord.client.set_triple_mode(mode)
+        await coord.async_request_refresh()
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_SET_TRIPLE_MODE,
+        _async_set_triple_mode_service,
+        schema=SERVICE_SET_TRIPLE_MODE_SCHEMA,
+    )
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up OREI Matrix Switch from a config entry."""
     client = OreiMatrixClient(
@@ -421,6 +466,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     _register_pbp_mode_service(hass)
     _register_single_input_service(hass)
     _register_quad_mode_service(hass)
+    _register_triple_mode_service(hass)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))

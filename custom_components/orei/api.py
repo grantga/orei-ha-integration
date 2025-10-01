@@ -28,6 +28,7 @@ from .const import (
     CMD_QUERY_POWER,
     CMD_QUERY_QUAD_MODE,
     CMD_QUERY_SINGLE_INPUT,
+    CMD_QUERY_TRIPLE_MODE,
     CMD_QUERY_WINDOW_INPUT,
     CMD_SET_AUDIO_OUTPUT,
     CMD_SET_MULTIVIEW,
@@ -36,6 +37,7 @@ from .const import (
     CMD_SET_PIP_SIZE,
     CMD_SET_QUAD_MODE,
     CMD_SET_SINGLE_INPUT,
+    CMD_SET_TRIPLE_MODE,
     CMD_SET_WINDOW_INPUT,
     LOGGER,
     MULTIVIEW_MAX,
@@ -55,6 +57,8 @@ from .const import (
     RESPONSE_POWER_ON,
     STOPBITS,
     TIMEOUT,
+    TRIPLE_MODE_MAX,
+    TRIPLE_MODE_MIN,
 )
 
 
@@ -600,6 +604,59 @@ class OreiMatrixClient:
         cmd = CMD_SET_QUAD_MODE.format(mode=mode)
         await self._write_and_read(cmd)
         LOGGER.debug("set_quad_mode(): set mode=%s complete", mode)
+
+    async def set_triple_mode(self, mode: int) -> None:
+        """
+        Set the triple windows display mode.
+
+        mode: 1..2
+        """
+        LOGGER.debug("set_triple_mode(): requested mode=%s", mode)
+        if not TRIPLE_MODE_MIN <= mode <= TRIPLE_MODE_MAX:
+            msg = f"Triple mode must be between {TRIPLE_MODE_MIN} and {TRIPLE_MODE_MAX}"
+            LOGGER.debug("set_triple_mode(): invalid mode %s", mode)
+            raise OreiMatrixError(msg)
+
+        cmd = CMD_SET_TRIPLE_MODE.format(mode=mode)
+        await self._write_and_read(cmd)
+        LOGGER.debug("set_triple_mode(): set mode=%s complete", mode)
+
+    async def get_triple_mode(self) -> int | None:
+        """
+        Query the triple display mode.
+
+        Returns 1..2 or None when device reports power off.
+        """
+        LOGGER.debug("get_triple_mode(): querying device")
+        response = await self._write_and_read(CMD_QUERY_TRIPLE_MODE)
+        resp = response.lower().strip()
+
+        if RESPONSE_POWER_OFF in resp:
+            LOGGER.debug("get_triple_mode(): device powered off, state unknown")
+            return None
+
+        for token in resp.split():
+            digits = "".join(ch for ch in token if ch.isdigit())
+            if not digits:
+                continue
+            try:
+                val = int(digits)
+            except ValueError:
+                continue
+            if TRIPLE_MODE_MIN <= val <= TRIPLE_MODE_MAX:
+                LOGGER.debug("get_triple_mode(): parsed value=%s", val)
+                return val
+
+        # Fallback: check for textual 'triple mode 1' forms
+        for token in resp.split():
+            if token.endswith("1"):
+                return 1
+            if token.endswith("2"):
+                return 2
+
+        msg = f"Invalid triple mode response: {response}"
+        LOGGER.debug("get_triple_mode(): parse failed: %s", response)
+        raise OreiMatrixError(msg)
 
     async def get_quad_mode(self) -> int | None:
         """

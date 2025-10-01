@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 from homeassistant.components.select import SelectEntity
 
-from .const import DOMAIN, NUM_INPUTS, NUM_WINDOWS, QUAD_MODE_MAX
+from .const import DOMAIN, NUM_INPUTS, NUM_WINDOWS, QUAD_MODE_MAX, TRIPLE_MODE_MAX
 from .coordinator import OreiCoordinatorEntity, OreiDataUpdateCoordinator
 
 if TYPE_CHECKING:
@@ -33,6 +33,7 @@ async def async_setup_entry(
             OreiPbpModeSelect(coordinator),
             OreiSingleInputSelect(coordinator),
             OreiQuadModeSelect(coordinator),
+            OreiTripleModeSelect(coordinator),
         ]
     )
 
@@ -312,4 +313,39 @@ class OreiQuadModeSelect(OreiCoordinatorEntity, SelectEntity):
             return
         mode = idx + 1
         await self.coordinator.client.set_quad_mode(mode)
+        await self.coordinator.async_request_refresh()
+
+
+class OreiTripleModeSelect(OreiCoordinatorEntity, SelectEntity):
+    """Select entity for triple display mode."""
+
+    def __init__(self, coordinator: OreiDataUpdateCoordinator) -> None:
+        """Initialize the triple mode select entity."""
+        super().__init__(coordinator, "triple_mode")
+        self._attr_name = "Triple Mode"
+        self._attr_icon = "mdi:view-dashboard-variant"
+        # Build options from 1..TRIPLE_MODE_MAX
+        self._attr_options = [f"Triple mode {i}" for i in range(1, TRIPLE_MODE_MAX + 1)]
+
+    @property
+    def current_option(self) -> str | None:
+        """Return the current triple mode as a human-readable option."""
+        if not self.coordinator.data:
+            return None
+        val = getattr(self.coordinator.data, "triple_mode", None)
+        if val is None:
+            return None
+        try:
+            return self._attr_options[val - 1]
+        except (IndexError, TypeError):
+            return None
+
+    async def async_select_option(self, option: str) -> None:
+        """Change the triple mode by selecting an option."""
+        try:
+            idx = self._attr_options.index(option)
+        except ValueError:
+            return
+        mode = idx + 1
+        await self.coordinator.client.set_triple_mode(mode)
         await self.coordinator.async_request_refresh()

@@ -89,6 +89,15 @@ CMD_QUERY_PBP_MODE = "r PBP mode!\r\n"
 PBP_MODE_MIN = 1
 PBP_MODE_MAX = 2
 
+# Triple display mode commands
+# Set triple mode: s triple mode {mode}!  (1..2)
+# Query triple mode: r triple mode!
+CMD_SET_TRIPLE_MODE = "s triple mode {mode}!\r\n"
+CMD_QUERY_TRIPLE_MODE = "r triple mode!\r\n"
+
+TRIPLE_MODE_MIN = 1
+TRIPLE_MODE_MAX = 2
+
 # Single-screen input routing (single view)
 # Set single-screen input: s in source{src}!  (1..NUM_INPUTS)
 # Query single-screen input: r in source!
