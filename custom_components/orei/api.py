@@ -118,7 +118,7 @@ class OreiMatrixClient:
                 pre_drained: int = 0
                 while True:
                     try:
-                        stale = await asyncio.wait_for(reader.readline(), timeout=0.1)
+                        stale = await asyncio.wait_for(reader.readline(), timeout=1)
                     except TimeoutError:
                         break
                     if not stale:
