@@ -36,6 +36,8 @@ class OreiMatrixData:
     pip_position: int | None
     # PIP size (1..3) or None
     pip_size: int | None
+    # PBP mode (1..2) or None
+    pbp_mode: int | None
     # Future: EDID and lock state support
 
 
@@ -87,6 +89,12 @@ class OreiDataUpdateCoordinator(DataUpdateCoordinator[OreiMatrixData]):
             except OreiMatrixError:
                 pip_size = None
 
+            # Fetch PBP mode
+            try:
+                pbp_mode = await self.client.get_pbp_mode()
+            except OreiMatrixError:
+                pbp_mode = None
+
             return OreiMatrixData(
                 power=power,
                 current_audio_src=current_audio_src,
@@ -94,6 +102,7 @@ class OreiDataUpdateCoordinator(DataUpdateCoordinator[OreiMatrixData]):
                 window_inputs=window_inputs,
                 pip_position=pip_position,
                 pip_size=pip_size,
+                pbp_mode=pbp_mode,
             )
 
         except OreiMatrixError as error:

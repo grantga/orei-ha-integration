@@ -30,6 +30,7 @@ async def async_setup_entry(
             *[OreiWindowSelect(coordinator, i) for i in range(1, NUM_WINDOWS + 1)],
             OreiPipPositionSelect(coordinator),
             OreiPipSizeSelect(coordinator),
+            OreiPbpModeSelect(coordinator),
         ]
     )
 
@@ -207,4 +208,38 @@ class OreiPipSizeSelect(OreiCoordinatorEntity, SelectEntity):
             return
         size = idx + 1
         await self.coordinator.client.set_pip_size(size)
+        await self.coordinator.async_request_refresh()
+
+
+class OreiPbpModeSelect(OreiCoordinatorEntity, SelectEntity):
+    """Select entity for PBP mode."""
+
+    def __init__(self, coordinator: OreiDataUpdateCoordinator) -> None:
+        """Initialize the PBP mode select entity."""
+        super().__init__(coordinator, "pbp_mode")
+        self._attr_name = "PBP Mode"
+        self._attr_icon = "mdi:view-grid-variant"
+        self._attr_options = ["PBP mode 1", "PBP mode 2"]
+
+    @property
+    def current_option(self) -> str | None:
+        """Return the current PBP mode as a human-readable option."""
+        if not self.coordinator.data:
+            return None
+        val = getattr(self.coordinator.data, "pbp_mode", None)
+        if val is None:
+            return None
+        try:
+            return self._attr_options[val - 1]
+        except (IndexError, TypeError):
+            return None
+
+    async def async_select_option(self, option: str) -> None:
+        """Change the PBP mode by selecting an option."""
+        try:
+            idx = self._attr_options.index(option)
+        except ValueError:
+            return
+        mode = idx + 1
+        await self.coordinator.client.set_pbp_mode(mode)
         await self.coordinator.async_request_refresh()

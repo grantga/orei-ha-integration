@@ -79,3 +79,12 @@ PIP_SIZE_MIN = 1
 PIP_SIZE_MAX = 3
 
 UPDATE_INTERVAL = 120  # seconds
+
+# PBP (picture-by-picture) mode commands
+# Set PBP mode: s PBP mode {mode}!  (1..2)
+# Query PBP mode: r PBP mode!
+CMD_SET_PBP_MODE = "s PBP mode {mode}!\r\n"
+CMD_QUERY_PBP_MODE = "r PBP mode!\r\n"
+
+PBP_MODE_MIN = 1
+PBP_MODE_MAX = 2

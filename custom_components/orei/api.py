@@ -22,12 +22,14 @@ from .const import (
     CMD_POWER_ON,
     CMD_QUERY_AUDIO_OUTPUT,
     CMD_QUERY_MULTIVIEW,
+    CMD_QUERY_PBP_MODE,
     CMD_QUERY_PIP_POSITION,
     CMD_QUERY_PIP_SIZE,
     CMD_QUERY_POWER,
     CMD_QUERY_WINDOW_INPUT,
     CMD_SET_AUDIO_OUTPUT,
     CMD_SET_MULTIVIEW,
+    CMD_SET_PBP_MODE,
     CMD_SET_PIP_POSITION,
     CMD_SET_PIP_SIZE,
     CMD_SET_WINDOW_INPUT,
@@ -37,6 +39,8 @@ from .const import (
     NUM_INPUTS,
     NUM_WINDOWS,
     PARITY,
+    PBP_MODE_MAX,
+    PBP_MODE_MIN,
     PIP_POSITION_MAX,
     PIP_POSITION_MIN,
     PIP_SIZE_MAX,
@@ -466,6 +470,60 @@ class OreiMatrixClient:
 
         msg = f"Invalid PIP size response: {response}"
         LOGGER.debug("get_pip_size(): parse failed: %s", response)
+        raise OreiMatrixError(msg)
+
+    async def set_pbp_mode(self, mode: int) -> None:
+        """
+        Set the PBP windows display mode.
+
+        mode: 1..2
+        """
+        LOGGER.debug("set_pbp_mode(): requested mode=%s", mode)
+        if not PBP_MODE_MIN <= mode <= PBP_MODE_MAX:
+            msg = f"PBP mode must be between {PBP_MODE_MIN} and {PBP_MODE_MAX}"
+            LOGGER.debug("set_pbp_mode(): invalid mode %s", mode)
+            raise OreiMatrixError(msg)
+
+        cmd = CMD_SET_PBP_MODE.format(mode=mode)
+        await self._write_and_read(cmd)
+        LOGGER.debug("set_pbp_mode(): set mode=%s complete", mode)
+
+    async def get_pbp_mode(self) -> int | None:
+        """
+        Query the PBP windows display mode.
+
+        Returns 1..2 or None when device reports power off.
+        """
+        LOGGER.debug("get_pbp_mode(): querying device")
+        response = await self._write_and_read(CMD_QUERY_PBP_MODE)
+        resp = response.lower().strip()
+
+        if RESPONSE_POWER_OFF in resp:
+            LOGGER.debug("get_pbp_mode(): device powered off, state unknown")
+            return None
+
+        # Try digit parsing
+        for token in resp.split():
+            digits = "".join(ch for ch in token if ch.isdigit())
+            if not digits:
+                continue
+            try:
+                val = int(digits)
+            except ValueError:
+                continue
+            if PBP_MODE_MIN <= val <= PBP_MODE_MAX:
+                LOGGER.debug("get_pbp_mode(): parsed value=%s", val)
+                return val
+
+        # Fallback textual parsing like 'PBP mode 1'
+        for token in resp.split():
+            if token.endswith("1"):
+                return 1
+            if token.endswith("2"):
+                return 2
+
+        msg = f"Invalid PBP mode response: {response}"
+        LOGGER.debug("get_pbp_mode(): parse failed: %s", response)
         raise OreiMatrixError(msg)
 
     async def get_window_input(self, window: int) -> int | None:

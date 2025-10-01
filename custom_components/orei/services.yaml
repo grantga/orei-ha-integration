@@ -105,3 +105,20 @@ set_pip_size:
     entry_id:
       description: "Optional config entry ID when multiple OREI devices are configured."
       example: "abcdef1234567890"
+
+set_pbp_mode:
+  description: "Set the PBP windows display mode (1..2)."
+  fields:
+    mode:
+      description: "PBP mode to select (1..2)."
+      example: 1
+      selector:
+        select:
+          options:
+            - value: "1"
+              label: "PBP mode 1"
+            - value: "2"
+              label: "PBP mode 2"
+    entry_id:
+      description: "Optional config entry ID when multiple OREI devices are configured."
+      example: "abcdef1234567890"

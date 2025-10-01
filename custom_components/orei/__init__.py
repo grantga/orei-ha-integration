@@ -63,6 +63,51 @@ SERVICE_SET_PIP_SIZE_SCHEMA = vol.Schema(
     }
 )
 
+SERVICE_SET_PBP_MODE = "set_pbp_mode"
+
+SERVICE_SET_PBP_MODE_SCHEMA = vol.Schema(
+    {
+        vol.Required("mode"): vol.All(int, vol.Range(min=1, max=2)),
+        vol.Optional("entry_id"): cv.string,
+    }
+)
+
+
+def _register_pbp_mode_service(hass: HomeAssistant) -> None:
+    """Register the set_pbp_mode service if not already present."""
+    if hass.services.async_services().get(DOMAIN, {}).get(SERVICE_SET_PBP_MODE):
+        return
+
+    async def _async_set_pbp_mode_service(call: ServiceCall) -> None:
+        data = call.data
+        mode = int(data["mode"])
+        entry_id = data.get("entry_id")
+
+        # Choose coordinator
+        if entry_id:
+            coord = hass.data[DOMAIN].get(entry_id)
+            if not coord:
+                msg = f"Config entry {entry_id} not found"
+                raise RuntimeError(msg)
+        else:
+            entries = list(hass.data[DOMAIN].values())
+            if len(entries) == 1:
+                coord = entries[0]
+            else:
+                msg = "More than one OREI config entry present; specify entry_id"
+                raise RuntimeError(msg)
+
+        await coord.client.set_pbp_mode(mode)
+        await coord.async_request_refresh()
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_SET_PBP_MODE,
+        _async_set_pbp_mode_service,
+        schema=SERVICE_SET_PBP_MODE_SCHEMA,
+    )
+
+
 # Service schema: source 0..NUM_INPUTS; optional output and entry_id
 SERVICE_SET_AUDIO_SCHEMA = vol.Schema(
     {
@@ -284,6 +329,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     _register_window_service(hass)
     _register_pip_position_service(hass)
     _register_pip_size_service(hass)
+    _register_pbp_mode_service(hass)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
