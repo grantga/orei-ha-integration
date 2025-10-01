@@ -19,7 +19,7 @@ BAUDRATE = 115200
 BYTESIZE = 8
 PARITY = "N"
 STOPBITS = 1
-TIMEOUT = 1
+TIMEOUT = 3
 
 # Protocol Commands
 CMD_POWER_ON = "power 1!"
