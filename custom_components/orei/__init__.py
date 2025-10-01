@@ -25,7 +25,6 @@ if TYPE_CHECKING:
 
 PLATFORMS = [
     Platform.SWITCH,  # For power control
-    Platform.SELECT,  # For input selection
 ]
 
 # Service names

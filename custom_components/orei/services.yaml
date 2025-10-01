@@ -7,3 +7,26 @@ set_audio_output:
     entry_id:
       description: "Optional config entry ID when multiple OREI devices are configured."
       example: "abcdef1234567890"
+
+set_multiview:
+  description: "Set the multi-view display mode for the OREI matrix switch."
+  fields:
+    mode:
+      description: "Multi-view mode to select. 1 = single screen, 2 = PIP, 3 = PBP, 4 = triple screen, 5 = quad screen."
+      example: 1
+      selector:
+        select:
+          options:
+            - value: 1
+              label: "Single screen"
+            - value: 2
+              label: "PIP"
+            - value: 3
+              label: "PBP"
+            - value: 4
+              label: "Triple screen"
+            - value: 5
+              label: "Quad screen"
+    entry_id:
+      description: "Optional config entry ID when multiple OREI devices are configured."
+      example: "abcdef1234567890"
