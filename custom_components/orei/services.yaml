@@ -1,0 +1,9 @@
+set_audio_output:
+  description: "Set the audio output source for the OREI matrix switch."
+  fields:
+    source:
+      description: "Audio source to select. 0 = follow window selected source; 1..4 = HDMI 1..4."
+      example: 1
+    entry_id:
+      description: "Optional config entry ID when multiple OREI devices are configured."
+      example: "abcdef1234567890"

@@ -25,7 +25,6 @@ from .const import (
     CMD_SET_AUDIO_OUTPUT,
     LOGGER,
     NUM_INPUTS,
-    NUM_OUTPUTS,
     PARITY,
     RESPONSE_POWER_OFF,
     RESPONSE_POWER_ON,
@@ -156,7 +155,7 @@ class OreiMatrixClient:
             # Wrap other errors as serial connection failure for config flow UX
             raise OreiSerialConnectionError(str(exc)) from exc
 
-    async def set_audio_output(self, source: int, output_num: int = 1) -> None:
+    async def set_audio_output(self, source: int) -> None:
         r"""
         Set the audio output source for an output.
 
@@ -165,9 +164,6 @@ class OreiMatrixClient:
         """
         if not 0 <= source <= NUM_INPUTS:
             msg = f"Audio source must be between 0 and {NUM_INPUTS}"
-            raise OreiMatrixError(msg)
-        if not 1 <= output_num <= NUM_OUTPUTS:
-            msg = f"Output must be between 1 and {NUM_OUTPUTS}"
             raise OreiMatrixError(msg)
 
         cmd = CMD_SET_AUDIO_OUTPUT.format(source=source)

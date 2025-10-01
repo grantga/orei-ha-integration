@@ -39,8 +39,7 @@ CMD_QUERY_AUDIO_OUTPUT = "r output audio!"
 RESPONSE_POWER_ON = "power on"
 RESPONSE_POWER_OFF = "power off"
 
-# Number of inputs/outputs
+# Number of inputs
 NUM_INPUTS = 4
-NUM_OUTPUTS = 1
 
 UPDATE_INTERVAL = 120  # seconds
