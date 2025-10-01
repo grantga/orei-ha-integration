@@ -23,12 +23,15 @@ from .const import (
     CMD_QUERY_AUDIO_OUTPUT,
     CMD_QUERY_MULTIVIEW,
     CMD_QUERY_POWER,
+    CMD_QUERY_WINDOW_INPUT,
     CMD_SET_AUDIO_OUTPUT,
     CMD_SET_MULTIVIEW,
+    CMD_SET_WINDOW_INPUT,
     LOGGER,
     MULTIVIEW_MAX,
     MULTIVIEW_MIN,
     NUM_INPUTS,
+    NUM_WINDOWS,
     PARITY,
     RESPONSE_POWER_OFF,
     RESPONSE_POWER_ON,
@@ -313,6 +316,70 @@ class OreiMatrixClient:
         cmd = CMD_SET_MULTIVIEW.format(mode=mode)
         await self._write_and_read(cmd)
         LOGGER.debug("set_multiview(): set mode=%s complete", mode)
+
+    async def set_window_input(self, window: int, source: int) -> None:
+        """
+        Set the HDMI input for a specific window.
+
+        window: 1..NUM_WINDOWS
+        source: 1..NUM_INPUTS
+
+        """
+        LOGGER.debug("set_window_input(): window=%s source=%s", window, source)
+
+        if not 1 <= window <= NUM_WINDOWS:
+            msg = f"Window must be between 1 and {NUM_WINDOWS}"
+            LOGGER.debug("set_window_input(): invalid window %s", window)
+            raise OreiMatrixError(msg)
+        if not 1 <= source <= NUM_INPUTS:
+            msg = f"Source must be between 1 and {NUM_INPUTS}"
+            LOGGER.debug("set_window_input(): invalid source %s", source)
+            raise OreiMatrixError(msg)
+
+        cmd = CMD_SET_WINDOW_INPUT.format(win=window, src=source)
+        await self._write_and_read(cmd)
+        LOGGER.debug("set_window_input(): done for window=%s", window)
+
+    async def get_window_input(self, window: int) -> int | None:
+        """
+        Query which HDMI input is selected for a given window.
+
+        Returns 1..NUM_INPUTS, or None when device reports power off.
+
+        """
+        LOGGER.debug("get_window_input(): querying window=%s", window)
+        if not 0 <= window <= NUM_WINDOWS:
+            msg = f"Window must be between 0 and {NUM_WINDOWS}"
+            LOGGER.debug("get_window_input(): invalid window %s", window)
+            raise OreiMatrixError(msg)
+
+        # 0 means ALL — device may reply with multiple lines; for simplicity
+        # request a single window when calling from the coordinator/UI.
+        cmd = CMD_QUERY_WINDOW_INPUT.format(win=window)
+        response = await self._write_and_read(cmd)
+        resp = response.lower().strip()
+
+        # If device is powered off, return unknown
+        if RESPONSE_POWER_OFF in resp:
+            LOGGER.debug("get_window_input(): device powered off, unknown state")
+            return None
+
+        # Example textual response: "window 1 select HDMI 1"
+        for token in resp.split():
+            digits = "".join(ch for ch in token if ch.isdigit())
+            if not digits:
+                continue
+            try:
+                val = int(digits)
+            except ValueError:
+                continue
+            if 1 <= val <= NUM_INPUTS:
+                LOGGER.debug("get_window_input(): parsed value=%s", val)
+                return val
+
+        msg = f"Invalid window input response: {response}"
+        LOGGER.debug("get_window_input(): parse failed: %s", response)
+        raise OreiMatrixError(msg)
 
     async def get_multiview(self) -> int | None:
         """

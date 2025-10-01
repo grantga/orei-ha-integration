@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 from homeassistant.components.select import SelectEntity
 
-from .const import DOMAIN, NUM_INPUTS
+from .const import DOMAIN, NUM_INPUTS, NUM_WINDOWS
 from .coordinator import OreiCoordinatorEntity, OreiDataUpdateCoordinator
 
 if TYPE_CHECKING:
@@ -26,6 +26,8 @@ async def async_setup_entry(
         [
             OreiAudioOutputSelect(coordinator),
             OreiMultiviewSelect(coordinator),
+            # Window selects (Window 1..NUM_WINDOWS)
+            *[OreiWindowSelect(coordinator, i) for i in range(1, NUM_WINDOWS + 1)],
         ]
     )
 
@@ -96,4 +98,38 @@ class OreiMultiviewSelect(OreiCoordinatorEntity, SelectEntity):
             return
         mode = idx + 1
         await self.coordinator.client.set_multiview(mode)
+        await self.coordinator.async_request_refresh()
+
+
+class OreiWindowSelect(OreiCoordinatorEntity, SelectEntity):
+    """Representation of a single window input selector."""
+
+    def __init__(self, coordinator: OreiDataUpdateCoordinator, window: int) -> None:
+        """Initialize a window select for a specific window number."""
+        super().__init__(coordinator, f"window_{window}")
+        self._window = window
+        self._attr_name = f"Window {window} Input"
+        self._attr_icon = "mdi:television-classic"
+        self._attr_options = [f"HDMI {i}" for i in range(1, NUM_INPUTS + 1)]
+
+    @property
+    def current_option(self) -> str | None:
+        """Return the current HDMI input for this window as a string."""
+        if not self.coordinator.data:
+            return None
+        try:
+            val = self.coordinator.data.window_inputs[self._window - 1]
+        except (IndexError, TypeError):
+            return None
+        if val is None:
+            return None
+        return f"HDMI {val}"
+
+    async def async_select_option(self, option: str) -> None:
+        """Select an HDMI input for this window."""
+        try:
+            idx = int(option.split()[-1])
+        except (ValueError, IndexError):
+            return
+        await self.coordinator.client.set_window_input(self._window, idx)
         await self.coordinator.async_request_refresh()

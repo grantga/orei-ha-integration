@@ -52,4 +52,13 @@ RESPONSE_POWER_OFF = "power off"
 # Number of inputs
 NUM_INPUTS = 4
 
+# Number of windows available for multiview layouts
+NUM_WINDOWS = 4
+
+# Window (per-view) commands
+# Set window input: s window {win} in {src}!
+# Query window input: r window {win} in!
+CMD_SET_WINDOW_INPUT = "s window {win} in {src}!\r\n"
+CMD_QUERY_WINDOW_INPUT = "r window {win} in!\r\n"
+
 UPDATE_INTERVAL = 120  # seconds

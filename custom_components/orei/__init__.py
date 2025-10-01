@@ -28,6 +28,17 @@ PLATFORMS = [
     Platform.SELECT,  # For audio output and multiview selects
 ]
 
+# Service to set a window's input
+SERVICE_SET_WINDOW = "set_window_input"
+
+SERVICE_SET_WINDOW_SCHEMA = vol.Schema(
+    {
+        vol.Required("window"): vol.All(int, vol.Range(min=1, max=4)),
+        vol.Required("source"): vol.All(int, vol.Range(min=1, max=NUM_INPUTS)),
+        vol.Optional("entry_id"): cv.string,
+    }
+)
+
 # Service names
 SERVICE_SET_AUDIO = "set_audio_output"
 
@@ -54,6 +65,113 @@ SERVICE_SET_MULTIVIEW_SCHEMA = vol.Schema(
 )
 
 
+def _register_audio_service(hass: HomeAssistant) -> None:
+    """Register the set_audio_output service if not already present."""
+    if hass.services.async_services().get(DOMAIN, {}).get(SERVICE_SET_AUDIO):
+        return
+
+    async def _async_set_audio_service(call: ServiceCall) -> None:
+        data = call.data
+        source = int(data["source"])
+        output = int(data.get("output", 1))
+        entry_id = data.get("entry_id")
+
+        # Choose coordinator
+        if entry_id:
+            coord = hass.data[DOMAIN].get(entry_id)
+            if not coord:
+                msg = f"Config entry {entry_id} not found"
+                raise RuntimeError(msg)
+        else:
+            entries = list(hass.data[DOMAIN].values())
+            if len(entries) == 1:
+                coord = entries[0]
+            else:
+                msg = "More than one OREI config entry present; specify entry_id"
+                raise RuntimeError(msg)
+
+        await coord.client.set_audio_output(source, output)
+        await coord.async_request_refresh()
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_SET_AUDIO,
+        _async_set_audio_service,
+        schema=SERVICE_SET_AUDIO_SCHEMA,
+    )
+
+
+def _register_multiview_service(hass: HomeAssistant) -> None:
+    """Register the set_multiview service if not already present."""
+    if hass.services.async_services().get(DOMAIN, {}).get(SERVICE_SET_MULTIVIEW):
+        return
+
+    async def _async_set_multiview_service(call: ServiceCall) -> None:
+        data = call.data
+        mode = int(data["mode"])
+        entry_id = data.get("entry_id")
+
+        # Choose coordinator
+        if entry_id:
+            coord = hass.data[DOMAIN].get(entry_id)
+            if not coord:
+                msg = f"Config entry {entry_id} not found"
+                raise RuntimeError(msg)
+        else:
+            entries = list(hass.data[DOMAIN].values())
+            if len(entries) == 1:
+                coord = entries[0]
+            else:
+                msg = "More than one OREI config entry present; specify entry_id"
+                raise RuntimeError(msg)
+
+        await coord.client.set_multiview(mode)
+        await coord.async_request_refresh()
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_SET_MULTIVIEW,
+        _async_set_multiview_service,
+        schema=SERVICE_SET_MULTIVIEW_SCHEMA,
+    )
+
+
+def _register_window_service(hass: HomeAssistant) -> None:
+    """Register the set_window_input service if not already present."""
+    if hass.services.async_services().get(DOMAIN, {}).get(SERVICE_SET_WINDOW):
+        return
+
+    async def _async_set_window_service(call: ServiceCall) -> None:
+        data = call.data
+        window = int(data["window"])
+        source = int(data["source"])
+        entry_id = data.get("entry_id")
+
+        # Choose coordinator
+        if entry_id:
+            coord = hass.data[DOMAIN].get(entry_id)
+            if not coord:
+                msg = f"Config entry {entry_id} not found"
+                raise RuntimeError(msg)
+        else:
+            entries = list(hass.data[DOMAIN].values())
+            if len(entries) == 1:
+                coord = entries[0]
+            else:
+                msg = "More than one OREI config entry present; specify entry_id"
+                raise RuntimeError(msg)
+
+        await coord.client.set_window_input(window, source)
+        await coord.async_request_refresh()
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_SET_WINDOW,
+        _async_set_window_service,
+        schema=SERVICE_SET_WINDOW_SCHEMA,
+    )
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up OREI Matrix Switch from a config entry."""
     client = OreiMatrixClient(
@@ -71,72 +189,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await coordinator.async_config_entry_first_refresh()
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
-    # Register service to set audio output. Register once when the first
-    # entry is created.
-    if not hass.services.async_services().get(DOMAIN, {}).get(SERVICE_SET_AUDIO):
 
-        async def _async_set_audio_service(call: ServiceCall) -> None:
-            data = call.data
-            source = int(data["source"])
-            output = int(data.get("output", 1))
-            entry_id = data.get("entry_id")
-
-            # Choose coordinator
-            if entry_id:
-                coord = hass.data[DOMAIN].get(entry_id)
-                if not coord:
-                    msg = f"Config entry {entry_id} not found"
-                    raise RuntimeError(msg)
-            else:
-                # If only one entry, use it; otherwise require entry_id
-                entries = list(hass.data[DOMAIN].values())
-                if len(entries) == 1:
-                    coord = entries[0]
-                else:
-                    msg = "More than one OREI config entry present; specify entry_id"
-                    raise RuntimeError(msg)
-
-            await coord.client.set_audio_output(source, output)
-            await coord.async_request_refresh()
-
-        hass.services.async_register(
-            DOMAIN,
-            SERVICE_SET_AUDIO,
-            _async_set_audio_service,
-            schema=SERVICE_SET_AUDIO_SCHEMA,
-        )
-
-    # Register multiview service if not already present
-    if not hass.services.async_services().get(DOMAIN, {}).get(SERVICE_SET_MULTIVIEW):
-
-        async def _async_set_multiview_service(call: ServiceCall) -> None:
-            data = call.data
-            mode = int(data["mode"])
-            entry_id = data.get("entry_id")
-
-            # Choose coordinator
-            if entry_id:
-                coord = hass.data[DOMAIN].get(entry_id)
-                if not coord:
-                    msg = f"Config entry {entry_id} not found"
-                    raise RuntimeError(msg)
-            else:
-                entries = list(hass.data[DOMAIN].values())
-                if len(entries) == 1:
-                    coord = entries[0]
-                else:
-                    msg = "More than one OREI config entry present; specify entry_id"
-                    raise RuntimeError(msg)
-
-            await coord.client.set_multiview(mode)
-            await coord.async_request_refresh()
-
-        hass.services.async_register(
-            DOMAIN,
-            SERVICE_SET_MULTIVIEW,
-            _async_set_multiview_service,
-            schema=SERVICE_SET_MULTIVIEW_SCHEMA,
-        )
+    # Register services once when the first entry is created
+    _register_audio_service(hass)
+    _register_multiview_service(hass)
+    _register_window_service(hass)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))

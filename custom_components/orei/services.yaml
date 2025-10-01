@@ -30,3 +30,38 @@ set_multiview:
     entry_id:
       description: "Optional config entry ID when multiple OREI devices are configured."
       example: "abcdef1234567890"
+
+set_window_input:
+  description: "Set the HDMI input for a specific window in the current multiview layout."
+  fields:
+    window:
+      description: "Window number to set (1..4)."
+      example: 1
+      selector:
+        select:
+          options:
+            - value: "1"
+              label: "Window 1"
+            - value: "2"
+              label: "Window 2"
+            - value: "3"
+              label: "Window 3"
+            - value: "4"
+              label: "Window 4"
+    source:
+      description: "HDMI input to select for the window (1..4)."
+      example: 1
+      selector:
+        select:
+          options:
+            - value: "1"
+              label: "HDMI 1"
+            - value: "2"
+              label: "HDMI 2"
+            - value: "3"
+              label: "HDMI 3"
+            - value: "4"
+              label: "HDMI 4"
+    entry_id:
+      description: "Optional config entry ID when multiple OREI devices are configured."
+      example: "abcdef1234567890"

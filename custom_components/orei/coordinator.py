@@ -12,7 +12,7 @@ from homeassistant.helpers.update_coordinator import (
 )
 
 from .api import OreiMatrixClient, OreiMatrixError
-from .const import LOGGER, NAME
+from .const import LOGGER, NAME, NUM_WINDOWS
 
 if TYPE_CHECKING:
     from datetime import timedelta
@@ -30,6 +30,8 @@ class OreiMatrixData:
     current_audio_src: int | None
     # Currently selected multiview mode (1-5)
     current_multiview: int | None
+    # Currently selected input for each window (1..NUM_INPUTS) or None
+    window_inputs: list[int | None]
     # Future: EDID and lock state support
 
 
@@ -61,10 +63,20 @@ class OreiDataUpdateCoordinator(DataUpdateCoordinator[OreiMatrixData]):
             current_audio_src = await self.client.get_audio_output()
             current_multiview = await self.client.get_multiview()
 
+            # Fetch per-window inputs (1..NUM_WINDOWS)
+            window_inputs: list[int | None] = []
+            for i in range(1, NUM_WINDOWS + 1):
+                try:
+                    val = await self.client.get_window_input(i)
+                except OreiMatrixError:
+                    val = None
+                window_inputs.append(val)
+
             return OreiMatrixData(
                 power=power,
                 current_audio_src=current_audio_src,
                 current_multiview=current_multiview,
+                window_inputs=window_inputs,
             )
 
         except OreiMatrixError as error:
