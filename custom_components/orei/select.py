@@ -31,6 +31,7 @@ async def async_setup_entry(
             OreiPipPositionSelect(coordinator),
             OreiPipSizeSelect(coordinator),
             OreiPbpModeSelect(coordinator),
+            OreiSingleInputSelect(coordinator),
         ]
     )
 
@@ -242,4 +243,37 @@ class OreiPbpModeSelect(OreiCoordinatorEntity, SelectEntity):
             return
         mode = idx + 1
         await self.coordinator.client.set_pbp_mode(mode)
+        await self.coordinator.async_request_refresh()
+
+
+class OreiSingleInputSelect(OreiCoordinatorEntity, SelectEntity):
+    """Select entity for single-screen input routing."""
+
+    def __init__(self, coordinator: OreiDataUpdateCoordinator) -> None:
+        """Initialize the single-screen input select entity."""
+        super().__init__(coordinator, "single_input")
+        self._attr_name = "Single Screen Input"
+        self._attr_icon = "mdi:input-hdmi"
+        self._attr_options = [f"HDMI {i}" for i in range(1, NUM_INPUTS + 1)]
+
+    @property
+    def current_option(self) -> str | None:
+        """Return the currently routed input in single-screen mode."""
+        if not self.coordinator.data:
+            return None
+        val = getattr(self.coordinator.data, "single_input", None)
+        if val is None:
+            return None
+        try:
+            return f"HDMI {val}"
+        except (IndexError, TypeError):
+            return None
+
+    async def async_select_option(self, option: str) -> None:
+        """Route the single-screen output to a selected HDMI input."""
+        try:
+            idx = int(option.split()[-1])
+        except (ValueError, IndexError):
+            return
+        await self.coordinator.client.set_single_input(idx)
         await self.coordinator.async_request_refresh()

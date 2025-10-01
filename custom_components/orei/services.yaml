@@ -122,3 +122,24 @@ set_pbp_mode:
     entry_id:
       description: "Optional config entry ID when multiple OREI devices are configured."
       example: "abcdef1234567890"
+
+set_single_input:
+  description: "Set the input source when in single-screen mode (1..4)."
+  fields:
+    source:
+      description: "HDMI input to route to the output (1..4)."
+      example: 1
+      selector:
+        select:
+          options:
+            - value: "1"
+              label: "HDMI 1"
+            - value: "2"
+              label: "HDMI 2"
+            - value: "3"
+              label: "HDMI 3"
+            - value: "4"
+              label: "HDMI 4"
+    entry_id:
+      description: "Optional config entry ID when multiple OREI devices are configured."
+      example: "abcdef1234567890"

@@ -26,12 +26,14 @@ from .const import (
     CMD_QUERY_PIP_POSITION,
     CMD_QUERY_PIP_SIZE,
     CMD_QUERY_POWER,
+    CMD_QUERY_SINGLE_INPUT,
     CMD_QUERY_WINDOW_INPUT,
     CMD_SET_AUDIO_OUTPUT,
     CMD_SET_MULTIVIEW,
     CMD_SET_PBP_MODE,
     CMD_SET_PIP_POSITION,
     CMD_SET_PIP_SIZE,
+    CMD_SET_SINGLE_INPUT,
     CMD_SET_WINDOW_INPUT,
     LOGGER,
     MULTIVIEW_MAX,
@@ -524,6 +526,59 @@ class OreiMatrixClient:
 
         msg = f"Invalid PBP mode response: {response}"
         LOGGER.debug("get_pbp_mode(): parse failed: %s", response)
+        raise OreiMatrixError(msg)
+
+    async def set_single_input(self, src: int) -> None:
+        """
+        Route a single-screen output to the given input source.
+
+        src: 1..NUM_INPUTS
+        """
+        LOGGER.debug("set_single_input(): requested src=%s", src)
+        if not 1 <= src <= NUM_INPUTS:
+            msg = f"Single-screen input must be between 1 and {NUM_INPUTS}"
+            LOGGER.debug("set_single_input(): invalid src %s", src)
+            raise OreiMatrixError(msg)
+
+        cmd = CMD_SET_SINGLE_INPUT.format(src=src)
+        await self._write_and_read(cmd)
+        LOGGER.debug("set_single_input(): set src=%s complete", src)
+
+    async def get_single_input(self) -> int | None:
+        """
+        Query which input is currently routed in single-screen mode.
+
+        Returns 1..NUM_INPUTS or None when device reports power off.
+        """
+        LOGGER.debug("get_single_input(): querying device")
+        response = await self._write_and_read(CMD_QUERY_SINGLE_INPUT)
+        resp = response.lower().strip()
+
+        if RESPONSE_POWER_OFF in resp:
+            LOGGER.debug("get_single_input(): device powered off, state unknown")
+            return None
+
+        # Try to find a digit corresponding to the input
+        for token in resp.split():
+            digits = "".join(ch for ch in token if ch.isdigit())
+            if not digits:
+                continue
+            try:
+                val = int(digits)
+            except ValueError:
+                continue
+            if 1 <= val <= NUM_INPUTS:
+                LOGGER.debug("get_single_input(): parsed value=%s", val)
+                return val
+
+        # Fallback textual matching like 'HDMI 1'
+        for i in range(1, NUM_INPUTS + 1):
+            if f"hdmi {i}" in resp:
+                LOGGER.debug("get_single_input(): parsed text HDMI %s", i)
+                return i
+
+        msg = f"Invalid single input response: {response}"
+        LOGGER.debug("get_single_input(): parse failed: %s", response)
         raise OreiMatrixError(msg)
 
     async def get_window_input(self, window: int) -> int | None:
