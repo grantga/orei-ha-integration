@@ -35,6 +35,16 @@ CMD_SET_AUDIO_OUTPUT = "s output audio {source}!\r\n"
 # selected. The command below requests the current audio source.
 CMD_QUERY_AUDIO_OUTPUT = "r output audio!\r\n"
 
+# Multiview (display mode) commands
+# Set multi-viewer display mode: s multiview x! where x=1..5
+# Query multi-viewer display mode: r multiview!
+CMD_SET_MULTIVIEW = "s multiview {mode}!\r\n"
+CMD_QUERY_MULTIVIEW = "r multiview!\r\n"
+
+# Multiview modes supported by the device
+MULTIVIEW_MIN = 1
+MULTIVIEW_MAX = 5
+
 # Response patterns
 RESPONSE_POWER_ON = "power on"
 RESPONSE_POWER_OFF = "power off"

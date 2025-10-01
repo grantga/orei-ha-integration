@@ -28,6 +28,8 @@ class OreiMatrixData:
     power: bool
     # Currently selected audio source (1-4)
     current_audio_src: int
+    # Currently selected multiview mode (1-5)
+    current_multiview: int
     # Future: EDID and lock state support
 
 
@@ -57,10 +59,12 @@ class OreiDataUpdateCoordinator(DataUpdateCoordinator[OreiMatrixData]):
             # Get current state
             power = await self.client.get_power_state()
             current_audio_src = await self.client.get_audio_output()
+            current_multiview = await self.client.get_multiview()
 
             return OreiMatrixData(
                 power=power,
                 current_audio_src=current_audio_src,
+                current_multiview=current_multiview,
             )
 
         except OreiMatrixError as error:

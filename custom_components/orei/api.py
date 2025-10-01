@@ -21,9 +21,13 @@ from .const import (
     CMD_POWER_OFF,
     CMD_POWER_ON,
     CMD_QUERY_AUDIO_OUTPUT,
+    CMD_QUERY_MULTIVIEW,
     CMD_QUERY_POWER,
     CMD_SET_AUDIO_OUTPUT,
+    CMD_SET_MULTIVIEW,
     LOGGER,
+    MULTIVIEW_MAX,
+    MULTIVIEW_MIN,
     NUM_INPUTS,
     PARITY,
     RESPONSE_POWER_OFF,
@@ -217,6 +221,45 @@ class OreiMatrixClient:
 
         cmd = CMD_SET_AUDIO_OUTPUT.format(source=source)
         await self._write_and_read(cmd)
+
+    async def set_multiview(self, mode: int) -> None:
+        """
+        Set the multi-viewer display mode.
+
+        mode: MULTIVIEW_MIN..MULTIVIEW_MAX where
+        1 = single screen, 2 = PIP, 3 = PBP, 4 = triple, 5 = quad
+        """
+        if not MULTIVIEW_MIN <= mode <= MULTIVIEW_MAX:
+            msg = f"Multiview mode must be between {MULTIVIEW_MIN} and {MULTIVIEW_MAX}"
+            raise OreiMatrixError(msg)
+
+        cmd = CMD_SET_MULTIVIEW.format(mode=mode)
+        await self._write_and_read(cmd)
+
+    async def get_multiview(self) -> int:
+        """
+        Return the current multi-viewer display mode.
+
+        Returns an integer between MULTIVIEW_MIN and MULTIVIEW_MAX.
+        """
+        response = await self._write_and_read(CMD_QUERY_MULTIVIEW)
+
+        resp = response.lower().strip()
+
+        # Look for a digit in the response text
+        for token in resp.split():
+            digits = "".join(ch for ch in token if ch.isdigit())
+            if not digits:
+                continue
+            try:
+                val = int(digits)
+            except ValueError:
+                continue
+            if MULTIVIEW_MIN <= val <= MULTIVIEW_MAX:
+                return val
+
+        msg = f"Invalid multiview response: {response}"
+        raise OreiMatrixError(msg)
 
     async def get_audio_output(self) -> int:
         """Return the current audio source (0=follow, 1..N=HDMI)."""

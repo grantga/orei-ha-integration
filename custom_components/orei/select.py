@@ -22,7 +22,12 @@ async def async_setup_entry(
 ) -> None:
     """Set up OREI Matrix Switch audio output selection."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
-    async_add_entities([OreiAudioOutputSelect(coordinator)])
+    async_add_entities(
+        [
+            OreiAudioOutputSelect(coordinator),
+            OreiMultiviewSelect(coordinator),
+        ]
+    )
 
 
 class OreiAudioOutputSelect(OreiCoordinatorEntity, SelectEntity):
@@ -46,4 +51,46 @@ class OreiAudioOutputSelect(OreiCoordinatorEntity, SelectEntity):
         """Change the selected audio ouput."""
         input_num = int(option.split()[-1])  # Extract number from "Input X"
         await self.coordinator.client.set_audio_output(input_num)
+        await self.coordinator.async_request_refresh()
+
+
+class OreiMultiviewSelect(OreiCoordinatorEntity, SelectEntity):
+    """Representation of the OREI Matrix Switch multiview selection."""
+
+    def __init__(self, coordinator: OreiDataUpdateCoordinator) -> None:
+        """Initialize the multiview selector."""
+        super().__init__(coordinator, "multiview")
+        self._attr_name = "Multiview Mode"
+        self._attr_icon = "mdi:view-grid"
+        # Options correspond to modes 1..5
+        self._attr_options = [
+            "Single",
+            "PIP",
+            "PBP",
+            "Triple",
+            "Quad",
+        ]
+
+    @property
+    def current_option(self) -> str | None:
+        """Return the current multiview mode as a string."""
+        if not self.coordinator.data:
+            return None
+        mode = self.coordinator.data.current_multiview
+        if not mode:
+            return None
+        # Modes are 1-based; options list is 0-based
+        try:
+            return self._attr_options[mode - 1]
+        except IndexError:
+            return None
+
+    async def async_select_option(self, option: str) -> None:
+        """Change the multiview mode."""
+        try:
+            idx = self._attr_options.index(option)
+        except ValueError:
+            return
+        mode = idx + 1
+        await self.coordinator.client.set_multiview(mode)
         await self.coordinator.async_request_refresh()
