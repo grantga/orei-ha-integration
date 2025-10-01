@@ -15,7 +15,7 @@ class OreiEntity(OreiCoordinatorEntity):
         """Initialize the entity."""
         super().__init__(coordinator, "base")
         self._attr_device_info = DeviceInfo(
-            entry_type=DeviceEntryType.DEVICE,
+            entry_type=DeviceEntryType.SERVICE,
             identifiers={(DOMAIN, coordinator.client.serial_port)},
             manufacturer="OREI",
             model="UHD-401MV",
