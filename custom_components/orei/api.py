@@ -111,6 +111,25 @@ class OreiMatrixClient:
 
         async with self._lock:
             try:
+                # Drain any stale/unread lines before sending a new command.
+                # If the device sent unsolicited or previous responses they
+                # would otherwise be read as the "first" reply for the next
+                # command. Use a short timeout so this is non-blocking.
+                pre_drained: int = 0
+                while True:
+                    try:
+                        stale = await asyncio.wait_for(reader.readline(), timeout=0.1)
+                    except TimeoutError:
+                        break
+                    if not stale:
+                        break
+                    pre_drained += 1
+                if pre_drained:
+                    LOGGER.debug(
+                        "_send_command_and_collect_lines: pre-drained %d stale lines",
+                        pre_drained,
+                    )
+
                 LOGGER.debug(
                     "_send_command_and_collect_lines: writing to %s: %s",
                     self.serial_port,
@@ -132,7 +151,7 @@ class OreiMatrixClient:
 
                 while True:
                     try:
-                        chunk = await asyncio.wait_for(reader.readline(), timeout=0.05)
+                        chunk = await asyncio.wait_for(reader.readline(), timeout=0.1)
                     except TimeoutError:
                         LOGGER.debug(
                             "_send_command_and_collect_lines: drain timeout, stopping"
