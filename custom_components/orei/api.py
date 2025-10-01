@@ -123,6 +123,43 @@ class OreiMatrixClient:
                 await self.disconnect()
                 raise OreiCommunicationError(str(exc)) from exc
 
+    async def _write_and_read(self, command: str) -> str:
+        """Write a command and read a single-line response while holding a lock."""
+        if not command:
+            msg = "Empty command"
+            raise OreiCommunicationError(msg)
+
+        await self.connect()
+
+        if not self._writer or not self._reader:
+            msg = "No serial connection available"
+            raise OreiSerialConnectionError(msg)
+
+        async with self._lock:
+            try:
+                LOGGER.debug("Serial write/read to %s: %s", self.serial_port, command)
+                self._writer.write(command.encode())
+                await self._writer.drain()
+                data = await asyncio.wait_for(self._reader.readline(), timeout=TIMEOUT)
+            except serial.SerialException as exc:
+                LOGGER.exception("Serial write/read failed: %s", exc)
+                await self.disconnect()
+                raise OreiCommunicationError(str(exc)) from exc
+            except TimeoutError as exc:
+                LOGGER.debug("Serial read timeout waiting for response")
+                await self.disconnect()
+                msg = "Read timeout"
+                raise OreiCommunicationError(msg) from exc
+
+        if not data:
+            msg = "No data received from serial device"
+            LOGGER.debug(msg)
+            await self.disconnect()
+            raise OreiCommunicationError(msg)
+
+        LOGGER.debug("Serial raw response from %s: %s", self.serial_port, data.hex())
+        return data.decode(errors="replace").strip()
+
     async def _read_response(self) -> str:
         """Read a single-line response from the device."""
         if not self._reader:
@@ -177,8 +214,7 @@ class OreiMatrixClient:
     async def get_audio_output(self) -> int:
         """Return the current audio source (0=follow, 1..N=HDMI)."""
         # Send query command and read single-line response
-        await self._write_command(CMD_QUERY_AUDIO_OUTPUT)
-        response = await self._read_response()
+        response = await self._write_and_read(CMD_QUERY_AUDIO_OUTPUT)
 
         # Normalize to lower-case for parsing
         resp = response.lower().strip()
@@ -210,8 +246,7 @@ class OreiMatrixClient:
 
     async def get_power_state(self) -> bool:
         """Query the device power state and return True if on, False if off."""
-        await self._write_command(CMD_QUERY_POWER)
-        response = await self._read_response()
+        response = await self._write_and_read(CMD_QUERY_POWER)
         if response == RESPONSE_POWER_ON:
             return True
         if response == RESPONSE_POWER_OFF:

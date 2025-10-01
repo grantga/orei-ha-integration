@@ -28,12 +28,12 @@ CMD_QUERY_POWER = "r power!\r\n"
 
 # Audio output command: set audio source for the (single) output.
 # Device expects: "s output audio x!" where x is 0..4
-CMD_SET_AUDIO_OUTPUT = "s output audio {source}!"
+CMD_SET_AUDIO_OUTPUT = "s output audio {source}!\r\n"
 
 # Query audio output source. Device responds with a text description such
 # as "output audio: follow window" or a message indicating which HDMI input is
 # selected. The command below requests the current audio source.
-CMD_QUERY_AUDIO_OUTPUT = "r output audio!"
+CMD_QUERY_AUDIO_OUTPUT = "r output audio!\r\n"
 
 # Response patterns
 RESPONSE_POWER_ON = "power on"
