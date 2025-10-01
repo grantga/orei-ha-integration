@@ -28,6 +28,8 @@ async def async_setup_entry(
             OreiMultiviewSelect(coordinator),
             # Window selects (Window 1..NUM_WINDOWS)
             *[OreiWindowSelect(coordinator, i) for i in range(1, NUM_WINDOWS + 1)],
+            OreiPipPositionSelect(coordinator),
+            OreiPipSizeSelect(coordinator),
         ]
     )
 
@@ -132,4 +134,77 @@ class OreiWindowSelect(OreiCoordinatorEntity, SelectEntity):
         except (ValueError, IndexError):
             return
         await self.coordinator.client.set_window_input(self._window, idx)
+        await self.coordinator.async_request_refresh()
+
+
+class OreiPipPositionSelect(OreiCoordinatorEntity, SelectEntity):
+    """Select entity for PIP position."""
+
+    def __init__(self, coordinator: OreiDataUpdateCoordinator) -> None:
+        """Initialize the PIP position select entity."""
+        super().__init__(coordinator, "pip_position")
+        self._attr_name = "PIP Position"
+        self._attr_icon = "mdi:swap-horizontal"
+        self._attr_options = [
+            "Left Top",
+            "Left Bottom",
+            "Right Top",
+            "Right Bottom",
+        ]
+
+    @property
+    def current_option(self) -> str | None:
+        """Return the current PIP position as a human-readable option."""
+        if not self.coordinator.data:
+            return None
+        val = self.coordinator.data.pip_position
+        if val is None:
+            return None
+        try:
+            return self._attr_options[val - 1]
+        except (IndexError, TypeError):
+            return None
+
+    async def async_select_option(self, option: str) -> None:
+        """Select a new PIP position by option label."""
+        try:
+            idx = self._attr_options.index(option)
+        except ValueError:
+            return
+        pos = idx + 1
+        await self.coordinator.client.set_pip_position(pos)
+        await self.coordinator.async_request_refresh()
+
+
+class OreiPipSizeSelect(OreiCoordinatorEntity, SelectEntity):
+    """Select entity for PIP size."""
+
+    def __init__(self, coordinator: OreiDataUpdateCoordinator) -> None:
+        """Initialize the PIP size select entity."""
+        super().__init__(coordinator, "pip_size")
+        self._attr_name = "PIP Size"
+        self._attr_icon = "mdi:resize"
+        self._attr_options = ["Small", "Middle", "Large"]
+
+    @property
+    def current_option(self) -> str | None:
+        """Return the current PIP size as a human-readable option."""
+        if not self.coordinator.data:
+            return None
+        val = self.coordinator.data.pip_size
+        if val is None:
+            return None
+        try:
+            return self._attr_options[val - 1]
+        except (IndexError, TypeError):
+            return None
+
+    async def async_select_option(self, option: str) -> None:
+        """Select a new PIP size by option label."""
+        try:
+            idx = self._attr_options.index(option)
+        except ValueError:
+            return
+        size = idx + 1
+        await self.coordinator.client.set_pip_size(size)
         await self.coordinator.async_request_refresh()

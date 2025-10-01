@@ -22,10 +22,14 @@ from .const import (
     CMD_POWER_ON,
     CMD_QUERY_AUDIO_OUTPUT,
     CMD_QUERY_MULTIVIEW,
+    CMD_QUERY_PIP_POSITION,
+    CMD_QUERY_PIP_SIZE,
     CMD_QUERY_POWER,
     CMD_QUERY_WINDOW_INPUT,
     CMD_SET_AUDIO_OUTPUT,
     CMD_SET_MULTIVIEW,
+    CMD_SET_PIP_POSITION,
+    CMD_SET_PIP_SIZE,
     CMD_SET_WINDOW_INPUT,
     LOGGER,
     MULTIVIEW_MAX,
@@ -33,6 +37,10 @@ from .const import (
     NUM_INPUTS,
     NUM_WINDOWS,
     PARITY,
+    PIP_POSITION_MAX,
+    PIP_POSITION_MIN,
+    PIP_SIZE_MAX,
+    PIP_SIZE_MIN,
     RESPONSE_POWER_OFF,
     RESPONSE_POWER_ON,
     STOPBITS,
@@ -339,6 +347,126 @@ class OreiMatrixClient:
         cmd = CMD_SET_WINDOW_INPUT.format(win=window, src=source)
         await self._write_and_read(cmd)
         LOGGER.debug("set_window_input(): done for window=%s", window)
+
+    async def set_pip_position(self, position: int) -> None:
+        """
+        Set the PIP window position.
+
+        position: 1..4 where:
+          1 = Left Top
+          2 = Left Bottom
+          3 = Right Top
+          4 = Right Bottom
+        """
+        LOGGER.debug("set_pip_position(): requested position=%s", position)
+        if not PIP_POSITION_MIN <= position <= PIP_POSITION_MAX:
+            msg = (
+                "PIP position must be between "
+                f"{PIP_POSITION_MIN} and {PIP_POSITION_MAX}"
+            )
+            LOGGER.debug("set_pip_position(): invalid position %s", position)
+            raise OreiMatrixError(msg)
+
+        cmd = CMD_SET_PIP_POSITION.format(pos=position)
+        await self._write_and_read(cmd)
+        LOGGER.debug("set_pip_position(): set position=%s complete", position)
+
+    async def get_pip_position(self) -> int | None:
+        """
+        Query the PIP window position.
+
+        Returns 1..4 or None when device reports power off.
+        """
+        LOGGER.debug("get_pip_position(): querying device")
+        response = await self._write_and_read(CMD_QUERY_PIP_POSITION)
+        resp = response.lower().strip()
+
+        if RESPONSE_POWER_OFF in resp:
+            LOGGER.debug("get_pip_position(): device powered off, state unknown")
+            return None
+
+        # Example response: "PIP on right top" or similar; look for digits
+        for token in resp.split():
+            digits = "".join(ch for ch in token if ch.isdigit())
+            if not digits:
+                continue
+            try:
+                val = int(digits)
+            except ValueError:
+                continue
+            if PIP_POSITION_MIN <= val <= PIP_POSITION_MAX:
+                LOGGER.debug("get_pip_position(): parsed value=%s", val)
+                return val
+
+        # Fallback: map textual descriptions
+        mapping = {
+            "left top": 1,
+            "left bottom": 2,
+            "right top": 3,
+            "right bottom": 4,
+        }
+        for key, val in mapping.items():
+            if key in resp:
+                LOGGER.debug("get_pip_position(): parsed text '%s' -> %s", key, val)
+                return val
+
+        msg = f"Invalid PIP position response: {response}"
+        LOGGER.debug("get_pip_position(): parse failed: %s", response)
+        raise OreiMatrixError(msg)
+
+    async def set_pip_size(self, size: int) -> None:
+        """
+        Set the PIP window size.
+
+        size: 1..3 where 1=small, 2=middle, 3=large
+        """
+        LOGGER.debug("set_pip_size(): requested size=%s", size)
+        if not PIP_SIZE_MIN <= size <= PIP_SIZE_MAX:
+            msg = f"PIP size must be between {PIP_SIZE_MIN} and {PIP_SIZE_MAX}"
+            LOGGER.debug("set_pip_size(): invalid size %s", size)
+            raise OreiMatrixError(msg)
+
+        cmd = CMD_SET_PIP_SIZE.format(size=size)
+        await self._write_and_read(cmd)
+        LOGGER.debug("set_pip_size(): set size=%s complete", size)
+
+    async def get_pip_size(self) -> int | None:
+        """
+        Query the PIP window size.
+
+        Returns 1..3 or None when device reports power off.
+        """
+        LOGGER.debug("get_pip_size(): querying device")
+        response = await self._write_and_read(CMD_QUERY_PIP_SIZE)
+        resp = response.lower().strip()
+
+        if RESPONSE_POWER_OFF in resp:
+            LOGGER.debug("get_pip_size(): device powered off, state unknown")
+            return None
+
+        # Try digit parsing first
+        for token in resp.split():
+            digits = "".join(ch for ch in token if ch.isdigit())
+            if not digits:
+                continue
+            try:
+                val = int(digits)
+            except ValueError:
+                continue
+            if PIP_SIZE_MIN <= val <= PIP_SIZE_MAX:
+                LOGGER.debug("get_pip_size(): parsed value=%s", val)
+                return val
+
+        # Map textual responses
+        mapping = {"small": 1, "middle": 2, "large": 3}
+        for key, val in mapping.items():
+            if key in resp:
+                LOGGER.debug("get_pip_size(): parsed text '%s' -> %s", key, val)
+                return val
+
+        msg = f"Invalid PIP size response: {response}"
+        LOGGER.debug("get_pip_size(): parse failed: %s", response)
+        raise OreiMatrixError(msg)
 
     async def get_window_input(self, window: int) -> int | None:
         """

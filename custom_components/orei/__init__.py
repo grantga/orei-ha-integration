@@ -45,6 +45,24 @@ SERVICE_SET_AUDIO = "set_audio_output"
 # Multiview service
 SERVICE_SET_MULTIVIEW = "set_multiview"
 
+# PIP services
+SERVICE_SET_PIP_POSITION = "set_pip_position"
+SERVICE_SET_PIP_SIZE = "set_pip_size"
+
+SERVICE_SET_PIP_POSITION_SCHEMA = vol.Schema(
+    {
+        vol.Required("position"): vol.All(int, vol.Range(min=1, max=4)),
+        vol.Optional("entry_id"): cv.string,
+    }
+)
+
+SERVICE_SET_PIP_SIZE_SCHEMA = vol.Schema(
+    {
+        vol.Required("size"): vol.All(int, vol.Range(min=1, max=3)),
+        vol.Optional("entry_id"): cv.string,
+    }
+)
+
 # Service schema: source 0..NUM_INPUTS; optional output and entry_id
 SERVICE_SET_AUDIO_SCHEMA = vol.Schema(
     {
@@ -172,6 +190,76 @@ def _register_window_service(hass: HomeAssistant) -> None:
     )
 
 
+def _register_pip_position_service(hass: HomeAssistant) -> None:
+    """Register the set_pip_position service if not already present."""
+    if hass.services.async_services().get(DOMAIN, {}).get(SERVICE_SET_PIP_POSITION):
+        return
+
+    async def _async_set_pip_position_service(call: ServiceCall) -> None:
+        data = call.data
+        position = int(data["position"])
+        entry_id = data.get("entry_id")
+
+        # Choose coordinator
+        if entry_id:
+            coord = hass.data[DOMAIN].get(entry_id)
+            if not coord:
+                msg = f"Config entry {entry_id} not found"
+                raise RuntimeError(msg)
+        else:
+            entries = list(hass.data[DOMAIN].values())
+            if len(entries) == 1:
+                coord = entries[0]
+            else:
+                msg = "More than one OREI config entry present; specify entry_id"
+                raise RuntimeError(msg)
+
+        await coord.client.set_pip_position(position)
+        await coord.async_request_refresh()
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_SET_PIP_POSITION,
+        _async_set_pip_position_service,
+        schema=SERVICE_SET_PIP_POSITION_SCHEMA,
+    )
+
+
+def _register_pip_size_service(hass: HomeAssistant) -> None:
+    """Register the set_pip_size service if not already present."""
+    if hass.services.async_services().get(DOMAIN, {}).get(SERVICE_SET_PIP_SIZE):
+        return
+
+    async def _async_set_pip_size_service(call: ServiceCall) -> None:
+        data = call.data
+        size = int(data["size"])
+        entry_id = data.get("entry_id")
+
+        # Choose coordinator
+        if entry_id:
+            coord = hass.data[DOMAIN].get(entry_id)
+            if not coord:
+                msg = f"Config entry {entry_id} not found"
+                raise RuntimeError(msg)
+        else:
+            entries = list(hass.data[DOMAIN].values())
+            if len(entries) == 1:
+                coord = entries[0]
+            else:
+                msg = "More than one OREI config entry present; specify entry_id"
+                raise RuntimeError(msg)
+
+        await coord.client.set_pip_size(size)
+        await coord.async_request_refresh()
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_SET_PIP_SIZE,
+        _async_set_pip_size_service,
+        schema=SERVICE_SET_PIP_SIZE_SCHEMA,
+    )
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up OREI Matrix Switch from a config entry."""
     client = OreiMatrixClient(
@@ -194,6 +282,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     _register_audio_service(hass)
     _register_multiview_service(hass)
     _register_window_service(hass)
+    _register_pip_position_service(hass)
+    _register_pip_size_service(hass)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))

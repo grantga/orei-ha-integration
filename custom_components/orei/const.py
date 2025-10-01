@@ -61,4 +61,21 @@ NUM_WINDOWS = 4
 CMD_SET_WINDOW_INPUT = "s window {win} in {src}!\r\n"
 CMD_QUERY_WINDOW_INPUT = "r window {win} in!\r\n"
 
+# PIP (picture-in-picture) position and size
+# Set PIP position: s PIP position x!  (1..4)
+# Query PIP position: r PIP position!
+CMD_SET_PIP_POSITION = "s PIP position {pos}!\r\n"
+CMD_QUERY_PIP_POSITION = "r PIP position!\r\n"
+
+# Set PIP size: s PIP size x!  (1..3)
+# Query PIP size: r PIP size!
+CMD_SET_PIP_SIZE = "s PIP size {size}!\r\n"
+CMD_QUERY_PIP_SIZE = "r PIP size!\r\n"
+
+# PIP ranges
+PIP_POSITION_MIN = 1
+PIP_POSITION_MAX = 4
+PIP_SIZE_MIN = 1
+PIP_SIZE_MAX = 3
+
 UPDATE_INTERVAL = 120  # seconds

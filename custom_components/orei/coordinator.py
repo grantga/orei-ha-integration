@@ -32,6 +32,10 @@ class OreiMatrixData:
     current_multiview: int | None
     # Currently selected input for each window (1..NUM_INPUTS) or None
     window_inputs: list[int | None]
+    # PIP position (1..4) or None
+    pip_position: int | None
+    # PIP size (1..3) or None
+    pip_size: int | None
     # Future: EDID and lock state support
 
 
@@ -72,11 +76,24 @@ class OreiDataUpdateCoordinator(DataUpdateCoordinator[OreiMatrixData]):
                     val = None
                 window_inputs.append(val)
 
+            # Fetch PIP position and size
+            try:
+                pip_position = await self.client.get_pip_position()
+            except OreiMatrixError:
+                pip_position = None
+
+            try:
+                pip_size = await self.client.get_pip_size()
+            except OreiMatrixError:
+                pip_size = None
+
             return OreiMatrixData(
                 power=power,
                 current_audio_src=current_audio_src,
                 current_multiview=current_multiview,
                 window_inputs=window_inputs,
+                pip_position=pip_position,
+                pip_size=pip_size,
             )
 
         except OreiMatrixError as error:
