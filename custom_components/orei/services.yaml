@@ -17,15 +17,15 @@ set_multiview:
       selector:
         select:
           options:
-            - value: 1
+            - value: "1"
               label: "Single screen"
-            - value: 2
+            - value: "2"
               label: "PIP"
-            - value: 3
+            - value: "3"
               label: "PBP"
-            - value: 4
+            - value: "4"
               label: "Triple screen"
-            - value: 5
+            - value: "5"
               label: "Quad screen"
     entry_id:
       description: "Optional config entry ID when multiple OREI devices are configured."

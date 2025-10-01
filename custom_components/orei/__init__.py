@@ -25,6 +25,7 @@ if TYPE_CHECKING:
 
 PLATFORMS = [
     Platform.SWITCH,  # For power control
+    Platform.SELECT,  # For audio output and multiview selects
 ]
 
 # Service names
