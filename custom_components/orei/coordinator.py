@@ -40,6 +40,8 @@ class OreiMatrixData:
     pbp_mode: int | None
     # Single-screen output current input (1..NUM_INPUTS) or None
     single_input: int | None
+    # Quad display mode (1..N) or None
+    quad_mode: int | None
     # Future: EDID and lock state support
 
 
@@ -103,6 +105,12 @@ class OreiDataUpdateCoordinator(DataUpdateCoordinator[OreiMatrixData]):
             except OreiMatrixError:
                 single_input = None
 
+            # Fetch quad mode
+            try:
+                quad_mode = await self.client.get_quad_mode()
+            except OreiMatrixError:
+                quad_mode = None
+
             return OreiMatrixData(
                 power=power,
                 current_audio_src=current_audio_src,
@@ -112,6 +120,7 @@ class OreiDataUpdateCoordinator(DataUpdateCoordinator[OreiMatrixData]):
                 pip_size=pip_size,
                 pbp_mode=pbp_mode,
                 single_input=single_input,
+                quad_mode=quad_mode,
             )
 
         except OreiMatrixError as error:

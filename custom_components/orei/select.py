@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 from homeassistant.components.select import SelectEntity
 
-from .const import DOMAIN, NUM_INPUTS, NUM_WINDOWS
+from .const import DOMAIN, NUM_INPUTS, NUM_WINDOWS, QUAD_MODE_MAX
 from .coordinator import OreiCoordinatorEntity, OreiDataUpdateCoordinator
 
 if TYPE_CHECKING:
@@ -32,6 +32,7 @@ async def async_setup_entry(
             OreiPipSizeSelect(coordinator),
             OreiPbpModeSelect(coordinator),
             OreiSingleInputSelect(coordinator),
+            OreiQuadModeSelect(coordinator),
         ]
     )
 
@@ -276,4 +277,39 @@ class OreiSingleInputSelect(OreiCoordinatorEntity, SelectEntity):
         except (ValueError, IndexError):
             return
         await self.coordinator.client.set_single_input(idx)
+        await self.coordinator.async_request_refresh()
+
+
+class OreiQuadModeSelect(OreiCoordinatorEntity, SelectEntity):
+    """Select entity for quad display mode."""
+
+    def __init__(self, coordinator: OreiDataUpdateCoordinator) -> None:
+        """Initialize the quad mode select entity."""
+        super().__init__(coordinator, "quad_mode")
+        self._attr_name = "Quad Mode"
+        self._attr_icon = "mdi:view-grid"
+        # Build options from 1..QUAD_MODE_MAX
+        self._attr_options = [f"Mode {i}" for i in range(1, QUAD_MODE_MAX + 1)]
+
+    @property
+    def current_option(self) -> str | None:
+        """Return the current quad mode as a human-readable option."""
+        if not self.coordinator.data:
+            return None
+        val = getattr(self.coordinator.data, "quad_mode", None)
+        if val is None:
+            return None
+        try:
+            return self._attr_options[val - 1]
+        except (IndexError, TypeError):
+            return None
+
+    async def async_select_option(self, option: str) -> None:
+        """Change the quad mode by selecting an option."""
+        try:
+            idx = self._attr_options.index(option)
+        except ValueError:
+            return
+        mode = idx + 1
+        await self.coordinator.client.set_quad_mode(mode)
         await self.coordinator.async_request_refresh()

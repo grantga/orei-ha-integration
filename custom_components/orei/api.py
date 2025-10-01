@@ -26,6 +26,7 @@ from .const import (
     CMD_QUERY_PIP_POSITION,
     CMD_QUERY_PIP_SIZE,
     CMD_QUERY_POWER,
+    CMD_QUERY_QUAD_MODE,
     CMD_QUERY_SINGLE_INPUT,
     CMD_QUERY_WINDOW_INPUT,
     CMD_SET_AUDIO_OUTPUT,
@@ -33,6 +34,7 @@ from .const import (
     CMD_SET_PBP_MODE,
     CMD_SET_PIP_POSITION,
     CMD_SET_PIP_SIZE,
+    CMD_SET_QUAD_MODE,
     CMD_SET_SINGLE_INPUT,
     CMD_SET_WINDOW_INPUT,
     LOGGER,
@@ -47,6 +49,8 @@ from .const import (
     PIP_POSITION_MIN,
     PIP_SIZE_MAX,
     PIP_SIZE_MIN,
+    QUAD_MODE_MAX,
+    QUAD_MODE_MIN,
     RESPONSE_POWER_OFF,
     RESPONSE_POWER_ON,
     STOPBITS,
@@ -579,6 +583,59 @@ class OreiMatrixClient:
 
         msg = f"Invalid single input response: {response}"
         LOGGER.debug("get_single_input(): parse failed: %s", response)
+        raise OreiMatrixError(msg)
+
+    async def set_quad_mode(self, mode: int) -> None:
+        """
+        Set the quad windows display mode.
+
+        mode: 1..2
+        """
+        LOGGER.debug("set_quad_mode(): requested mode=%s", mode)
+        if not QUAD_MODE_MIN <= mode <= QUAD_MODE_MAX:
+            msg = f"Quad mode must be between {QUAD_MODE_MIN} and {QUAD_MODE_MAX}"
+            LOGGER.debug("set_quad_mode(): invalid mode %s", mode)
+            raise OreiMatrixError(msg)
+
+        cmd = CMD_SET_QUAD_MODE.format(mode=mode)
+        await self._write_and_read(cmd)
+        LOGGER.debug("set_quad_mode(): set mode=%s complete", mode)
+
+    async def get_quad_mode(self) -> int | None:
+        """
+        Query the quad display mode.
+
+        Returns 1..2 or None when device reports power off.
+        """
+        LOGGER.debug("get_quad_mode(): querying device")
+        response = await self._write_and_read(CMD_QUERY_QUAD_MODE)
+        resp = response.lower().strip()
+
+        if RESPONSE_POWER_OFF in resp:
+            LOGGER.debug("get_quad_mode(): device powered off, state unknown")
+            return None
+
+        for token in resp.split():
+            digits = "".join(ch for ch in token if ch.isdigit())
+            if not digits:
+                continue
+            try:
+                val = int(digits)
+            except ValueError:
+                continue
+            if QUAD_MODE_MIN <= val <= QUAD_MODE_MAX:
+                LOGGER.debug("get_quad_mode(): parsed value=%s", val)
+                return val
+
+        # Fallback: check for textual 'quad mode 1' forms
+        for token in resp.split():
+            if token.endswith("1"):
+                return 1
+            if token.endswith("2"):
+                return 2
+
+        msg = f"Invalid quad mode response: {response}"
+        LOGGER.debug("get_quad_mode(): parse failed: %s", response)
         raise OreiMatrixError(msg)
 
     async def get_window_input(self, window: int) -> int | None:

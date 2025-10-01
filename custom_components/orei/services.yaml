@@ -143,3 +143,20 @@ set_single_input:
     entry_id:
       description: "Optional config entry ID when multiple OREI devices are configured."
       example: "abcdef1234567890"
+
+set_quad_mode:
+  description: "Set the quad display mode for the OREI matrix switch."
+  fields:
+    mode:
+      description: "Quad mode to select (1..N)."
+      example: 1
+      selector:
+        select:
+          options:
+            - value: "1"
+              label: "Mode 1"
+            - value: "2"
+              label: "Mode 2"
+    entry_id:
+      description: "Optional config entry ID when multiple OREI devices are configured."
+      example: "abcdef1234567890"

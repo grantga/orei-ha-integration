@@ -94,3 +94,12 @@ PBP_MODE_MAX = 2
 # Query single-screen input: r in source!
 CMD_SET_SINGLE_INPUT = "s in source {src}!\r\n"
 CMD_QUERY_SINGLE_INPUT = "r in source!\r\n"
+
+# Quad display mode commands
+# Set quad mode: s quad mode {mode}!  (1..2)
+# Query quad mode: r quad mode!
+CMD_SET_QUAD_MODE = "s quad mode {mode}!\r\n"
+CMD_QUERY_QUAD_MODE = "r quad mode!\r\n"
+
+QUAD_MODE_MIN = 1
+QUAD_MODE_MAX = 2
