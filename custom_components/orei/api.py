@@ -70,25 +70,38 @@ class OreiMatrixClient:
         self._reader: Any | None = None
         self._writer: Any | None = None
         self._lock = asyncio.Lock()
+        # Prevent concurrent connect() calls from racing
+        self._connect_lock = asyncio.Lock()
         # Allow overriding the default baudrate from constants via init
         self.baudrate = int(baudrate) if baudrate is not None else BAUDRATE
 
     async def connect(self) -> None:
         """Open the serial connection if not already open."""
+        # Fast-path: already connected
         if self._writer is not None and self._reader is not None:
             return
 
-        try:
-            self._reader, self._writer = await serial_asyncio.open_serial_connection(
-                url=self.serial_port,
-                baudrate=self.baudrate,
-                bytesize=BYTESIZE,
-                parity=PARITY,
-                stopbits=STOPBITS,
-            )
-        except serial.SerialException as exc:  # pragma: no cover - requires hardware
-            LOGGER.error("Failed to open serial port %s: %s", self.serial_port, exc)
-            raise OreiSerialConnectionError(str(exc)) from exc
+        # Ensure only one coroutine can attempt to open the connection at a time
+        async with self._connect_lock:
+            if self._writer is not None and self._reader is not None:
+                return
+
+            try:
+                (
+                    self._reader,
+                    self._writer,
+                ) = await serial_asyncio.open_serial_connection(
+                    url=self.serial_port,
+                    baudrate=self.baudrate,
+                    bytesize=BYTESIZE,
+                    parity=PARITY,
+                    stopbits=STOPBITS,
+                )
+            except (
+                serial.SerialException
+            ) as exc:  # pragma: no cover - requires hardware
+                LOGGER.error("Failed to open serial port %s: %s", self.serial_port, exc)
+                raise OreiSerialConnectionError(str(exc)) from exc
 
     async def disconnect(self) -> None:
         """Close the serial connection if open."""
@@ -100,31 +113,15 @@ class OreiMatrixClient:
                 self._writer = None
                 self._reader = None
 
-    async def _write_command(self, command: str) -> None:
-        """Write a command to the device, do not wait for a response."""
-        if not command:
-            msg = "Empty command"
-            raise OreiCommunicationError(msg)
-
-        await self.connect()
-
-        if not self._writer:
-            msg = "No serial writer available"
-            raise OreiSerialConnectionError(msg)
-
-        async with self._lock:
-            try:
-                data = command.encode()
-                LOGGER.debug("Serial write to %s: %s", self.serial_port, command)
-                self._writer.write(data)
-                await self._writer.drain()
-            except serial.SerialException as exc:
-                LOGGER.exception("Serial write failed: %s", exc)
-                await self.disconnect()
-                raise OreiCommunicationError(str(exc)) from exc
-
     async def _write_and_read(self, command: str) -> str:
-        """Write a command and read a single-line response while holding a lock."""
+        """
+        Write a command and read all response lines while holding a lock.
+
+        Send the command, read the first line using the configured TIMEOUT
+        (device may take time to respond), then drain any immediately
+        available additional lines using a short drain timeout loop. The
+        last non-empty line received is returned.
+        """
         if not command:
             msg = "Empty command"
             raise OreiCommunicationError(msg)
@@ -138,9 +135,31 @@ class OreiMatrixClient:
         async with self._lock:
             try:
                 LOGGER.debug("Serial write/read to %s: %s", self.serial_port, command)
+                # send command
                 self._writer.write(command.encode())
                 await self._writer.drain()
-                data = await asyncio.wait_for(self._reader.readline(), timeout=TIMEOUT)
+
+                # Read first line with the main TIMEOUT (device may be slow).
+                first = await asyncio.wait_for(self._reader.readline(), timeout=TIMEOUT)
+
+                lines: list[bytes] = []
+                if first:
+                    lines.append(first)
+
+                # Drain any immediately-available additional lines. Use a short
+                # timeout so we don't wait the full TIMEOUT for each extra line.
+                while True:
+                    try:
+                        chunk = await asyncio.wait_for(
+                            self._reader.readline(), timeout=0.05
+                        )
+                    except TimeoutError:
+                        # no more data ready within short interval -> stop draining
+                        break
+                    if not chunk:
+                        break
+                    lines.append(chunk)
+
             except serial.SerialException as exc:
                 LOGGER.exception("Serial write/read failed: %s", exc)
                 await self.disconnect()
@@ -151,41 +170,29 @@ class OreiMatrixClient:
                 msg = "Read timeout"
                 raise OreiCommunicationError(msg) from exc
 
-        if not data:
+        if not lines:
             msg = "No data received from serial device"
             LOGGER.debug(msg)
             await self.disconnect()
             raise OreiCommunicationError(msg)
 
-        LOGGER.debug("Serial raw response from %s: %s", self.serial_port, data.hex())
-        return data.decode(errors="replace").strip()
-
-    async def _read_response(self) -> str:
-        """Read a single-line response from the device."""
-        if not self._reader:
-            msg = "No serial reader available"
-            raise OreiSerialConnectionError(msg)
+        # Log the raw responses (hex) for debugging
         try:
-            # Prefer readline which waits for a newline-terminated response.
-            data = await asyncio.wait_for(self._reader.readline(), timeout=TIMEOUT)
-        except serial.SerialException as exc:
-            LOGGER.exception("Serial read failed: %s", exc)
-            await self.disconnect()
-            raise OreiCommunicationError(str(exc)) from exc
-        except TimeoutError as exc:
-            LOGGER.debug("Serial read timeout waiting for response")
-            await self.disconnect()
-            msg = "Read timeout"
-            raise OreiCommunicationError(msg) from exc
+            raw_hex = b" ".join(lines).hex()
+        except (AttributeError, TypeError):
+            raw_hex = "<unhexable>"
+        LOGGER.debug("Serial raw response(s) from %s: %s", self.serial_port, raw_hex)
 
-        if not data:
-            msg = "No data received from serial device"
-            LOGGER.debug(msg)
-            await self.disconnect()
-            raise OreiCommunicationError(msg)
+        # Return the last non-empty decoded line
+        for chunk in reversed(lines):
+            text = chunk.decode(errors="replace").strip()
+            if text:
+                return text
 
-        LOGGER.debug("Serial raw response from %s: %s", self.serial_port, data.hex())
-        return data.decode(errors="replace").strip()
+        # If all lines were empty after decoding, treat as error
+        await self.disconnect()
+        msg = "No non-empty response received from serial device"
+        raise OreiCommunicationError(msg)
 
     async def test_connection(self) -> None:
         """Simple test used by the config flow to verify device is reachable."""
@@ -209,7 +216,7 @@ class OreiMatrixClient:
             raise OreiMatrixError(msg)
 
         cmd = CMD_SET_AUDIO_OUTPUT.format(source=source)
-        await self._write_command(cmd)
+        await self._write_and_read(cmd)
 
     async def get_audio_output(self) -> int:
         """Return the current audio source (0=follow, 1..N=HDMI)."""
@@ -229,7 +236,8 @@ class OreiMatrixClient:
                 val = int(digits)
             except ValueError:
                 continue
-            if 1 <= val <= NUM_INPUTS:
+            # Accept 0 (follow) as well as 1..NUM_INPUTS
+            if 0 <= val <= NUM_INPUTS:
                 return val
 
         # If parsing fails, raise an error
@@ -238,11 +246,11 @@ class OreiMatrixClient:
 
     async def power_on(self) -> None:
         """Turn the device power on."""
-        await self._write_command(CMD_POWER_ON)
+        await self._write_and_read(CMD_POWER_ON)
 
     async def power_off(self) -> None:
         """Turn the device power off."""
-        await self._write_command(CMD_POWER_OFF)
+        await self._write_and_read(CMD_POWER_OFF)
 
     async def get_power_state(self) -> bool:
         """Query the device power state and return True if on, False if off."""
