@@ -27,9 +27,9 @@ class OreiMatrixData:
     # Whether the matrix switch is powered on
     power: bool
     # Currently selected audio source (1-4)
-    current_audio_src: int
+    current_audio_src: int | None
     # Currently selected multiview mode (1-5)
-    current_multiview: int
+    current_multiview: int | None
     # Future: EDID and lock state support
 
 

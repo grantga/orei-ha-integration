@@ -314,7 +314,7 @@ class OreiMatrixClient:
         await self._write_and_read(cmd)
         LOGGER.debug("set_multiview(): set mode=%s complete", mode)
 
-    async def get_multiview(self) -> int:
+    async def get_multiview(self) -> int | None:
         """
         Return the current multi-viewer display mode.
 
@@ -323,6 +323,11 @@ class OreiMatrixClient:
         LOGGER.debug("get_multiview(): querying device")
         response = await self._write_and_read(CMD_QUERY_MULTIVIEW)
         resp = response.lower().strip()
+
+        # If the device reports it is powered off, multiview state is unknown.
+        if RESPONSE_POWER_OFF in resp:
+            LOGGER.debug("get_multiview(): device powered off, state unknown")
+            return None
 
         # First try to map common textual responses to the numeric mode.
         # Accept various forms and case-insensitive matches to be robust.
@@ -347,14 +352,25 @@ class OreiMatrixClient:
         LOGGER.debug("get_multiview(): parse failed: %s", response)
         raise OreiMatrixError(msg)
 
-    async def get_audio_output(self) -> int:
-        """Return the current audio source (0=follow, 1..N=HDMI)."""
+    async def get_audio_output(self) -> int | None:
+        """
+        Return the current audio source (0=follow, 1..N=HDMI).
+
+        Returns None when the device is powered off and the audio state is
+        therefore unknown.
+
+        """
         # Send query command and read single-line response
         LOGGER.debug("get_audio_output(): querying device")
         response = await self._write_and_read(CMD_QUERY_AUDIO_OUTPUT)
 
         # Normalize to lower-case for parsing
         resp = response.lower().strip()
+
+        # If the device reports it is powered off, audio output is unknown.
+        if RESPONSE_POWER_OFF in resp:
+            LOGGER.debug("get_audio_output(): device powered off, state unknown")
+            return None
 
         # Try to find a digit 1..NUM_INPUTS in the response
         for token in resp.split():

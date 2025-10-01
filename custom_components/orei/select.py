@@ -45,7 +45,10 @@ class OreiAudioOutputSelect(OreiCoordinatorEntity, SelectEntity):
         """Return the current selected audio src."""
         if not self.coordinator.data:
             return None
-        return f"Input {self.coordinator.data.current_audio_src}"
+        src = self.coordinator.data.current_audio_src
+        if src is None:
+            return None
+        return f"Input {src}"
 
     async def async_select_option(self, option: str) -> None:
         """Change the selected audio ouput."""
@@ -77,7 +80,7 @@ class OreiMultiviewSelect(OreiCoordinatorEntity, SelectEntity):
         if not self.coordinator.data:
             return None
         mode = self.coordinator.data.current_multiview
-        if not mode:
+        if mode is None:
             return None
         # Modes are 1-based; options list is 0-based
         try:
