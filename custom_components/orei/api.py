@@ -111,25 +111,6 @@ class OreiMatrixClient:
 
         async with self._lock:
             try:
-                # Drain any stale/unread lines before sending a new command.
-                # If the device sent unsolicited or previous responses they
-                # would otherwise be read as the "first" reply for the next
-                # command. Use a short timeout so this is non-blocking.
-                pre_drained: int = 0
-                while True:
-                    try:
-                        stale = await asyncio.wait_for(reader.readline(), timeout=1)
-                    except TimeoutError:
-                        break
-                    if not stale:
-                        break
-                    pre_drained += 1
-                if pre_drained:
-                    LOGGER.debug(
-                        "_send_command_and_collect_lines: pre-drained %d stale lines",
-                        pre_drained,
-                    )
-
                 LOGGER.debug(
                     "_send_command_and_collect_lines: writing to %s: %s",
                     self.serial_port,
@@ -343,17 +324,23 @@ class OreiMatrixClient:
         response = await self._write_and_read(CMD_QUERY_MULTIVIEW)
         resp = response.lower().strip()
 
-        # Look for a digit in the response text
-        for token in resp.split():
-            digits = "".join(ch for ch in token if ch.isdigit())
-            if not digits:
-                continue
-            try:
-                val = int(digits)
-            except ValueError:
-                continue
-            if MULTIVIEW_MIN <= val <= MULTIVIEW_MAX:
-                LOGGER.debug("get_multiview(): parsed value=%s", val)
+        # First try to map common textual responses to the numeric mode.
+        # Accept various forms and case-insensitive matches to be robust.
+        mapping: dict[str, int] = {
+            "single screen": 1,
+            "single": 1,
+            "pip": 2,
+            "pbp": 3,
+            "triple screen": 4,
+            "quad screen": 5,
+        }
+
+        # Check for any mapping key appearing in the response text. Prefer
+        # longer keys first so e.g. "single screen" matches before "single".
+        for key in sorted(mapping.keys(), key=len, reverse=True):
+            if key in resp:
+                val = mapping[key]
+                LOGGER.debug("get_multiview(): parsed text '%s' -> %s", key, val)
                 return val
 
         msg = f"Invalid multiview response: {response}"
