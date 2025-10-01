@@ -101,8 +101,7 @@ class OreiMatrixClient:
                     parity=PARITY,
                     stopbits=STOPBITS,
                 )
-                await asyncio.sleep(2)  # Wait for the device to reset and initialize
-                self._reader.reset_input_buffer()  # Clear any junk data from the buffer
+                await asyncio.sleep(1)  # Wait for the device to reset and initialize
             except (
                 serial.SerialException
             ) as exc:  # pragma: no cover - requires hardware
