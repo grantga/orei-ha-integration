@@ -22,9 +22,9 @@ STOPBITS = 1
 TIMEOUT = 3
 
 # Protocol Commands
-CMD_POWER_ON = "power 1!"
-CMD_POWER_OFF = "power 0!"
-CMD_QUERY_POWER = "r power!"
+CMD_POWER_ON = "power 1!\r\n"
+CMD_POWER_OFF = "power 0!\r\n"
+CMD_QUERY_POWER = "r power!\r\n"
 
 # Audio output command: set audio source for the (single) output.
 # Device expects: "s output audio x!" where x is 0..4
