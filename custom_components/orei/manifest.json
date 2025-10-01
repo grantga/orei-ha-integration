@@ -9,7 +9,6 @@
   "documentation": "https://cdn.shopify.com/s/files/1/1988/4253/files/UHD-401MV-Updated_User_Manual.pdf",
   "integration_type": "device",
   "iot_class": "local_polling",
-  
   "issue_tracker": "https://github.com/grantga/orei-ha-integration/issues",
   "requirements": [
     "pyserial-asyncio==0.6"
