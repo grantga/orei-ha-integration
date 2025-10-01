@@ -15,7 +15,6 @@ from .const import (
     DOMAIN,
     NAME,
     NUM_INPUTS,
-    NUM_OUTPUTS,
     UPDATE_INTERVAL,
 )
 from .coordinator import OreiDataUpdateCoordinator
@@ -38,10 +37,6 @@ SERVICE_SET_AUDIO_SCHEMA = vol.Schema(
         vol.Required("source"): vol.All(
             int,
             vol.Range(min=0, max=NUM_INPUTS),
-        ),
-        vol.Optional("output", default=1): vol.All(
-            int,
-            vol.Range(min=1, max=NUM_OUTPUTS),
         ),
         vol.Optional("entry_id"): cv.string,
     }
