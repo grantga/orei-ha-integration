@@ -135,6 +135,11 @@ class OreiMatrixClient:
             LOGGER.exception("Serial read failed: %s", exc)
             await self.disconnect()
             raise OreiCommunicationError(str(exc)) from exc
+        except TimeoutError as exc:
+            LOGGER.debug("Serial read timeout waiting for response")
+            await self.disconnect()
+            msg = "Read timeout"
+            raise OreiCommunicationError(msg) from exc
 
         if not data:
             msg = "No data received from serial device"
