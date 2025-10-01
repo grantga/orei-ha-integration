@@ -22,8 +22,8 @@ STOPBITS = 1
 TIMEOUT = 1
 
 # Protocol Commands
-CMD_POWER_ON = "s power 1!"
-CMD_POWER_OFF = "s power 2!"
+CMD_POWER_ON = "power 1!"
+CMD_POWER_OFF = "power 2!"
 CMD_QUERY_POWER = "r power!"
 
 # Audio output command: set audio source for the (single) output.
