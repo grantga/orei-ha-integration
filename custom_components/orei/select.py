@@ -65,6 +65,13 @@ class OreiAudioOutputSelect(OreiCoordinatorEntity, SelectEntity):
             return None
         return f"Input {src}"
 
+    @property
+    def available(self) -> bool:
+        """Return True if entity is available (has known audio source)."""
+        if not self.coordinator.data:
+            return False
+        return getattr(self.coordinator.data, "current_audio_src", None) is not None
+
     async def async_select_option(self, option: str) -> None:
         """Change the selected audio ouput."""
         input_num = int(option.split()[-1])  # Extract number from "Input X"
@@ -102,6 +109,13 @@ class OreiMultiviewSelect(OreiCoordinatorEntity, SelectEntity):
             return self._attr_options[mode - 1]
         except IndexError:
             return None
+
+    @property
+    def available(self) -> bool:
+        """Return True if multiview state is known."""
+        if not self.coordinator.data:
+            return False
+        return getattr(self.coordinator.data, "current_multiview", None) is not None
 
     async def async_select_option(self, option: str) -> None:
         """Change the multiview mode."""
@@ -158,6 +172,17 @@ class OreiWindowSelect(OreiCoordinatorEntity, SelectEntity):
             val,
         )
         return f"HDMI {val}"
+
+    @property
+    def available(self) -> bool:
+        """Return True if this window has a known input mapping."""
+        if not self.coordinator.data:
+            return False
+        try:
+            val = self.coordinator.data.window_inputs[self._window - 1]
+        except (IndexError, TypeError):
+            return False
+        return val is not None
 
     async def async_select_option(self, option: str) -> None:
         """Select an HDMI input for this window."""
@@ -221,6 +246,13 @@ class OreiPipPositionSelect(OreiCoordinatorEntity, SelectEntity):
         except (IndexError, TypeError):
             return None
 
+    @property
+    def available(self) -> bool:
+        """Return True if PIP position is known."""
+        if not self.coordinator.data:
+            return False
+        return getattr(self.coordinator.data, "pip_position", None) is not None
+
     async def async_select_option(self, option: str) -> None:
         """Select a new PIP position by option label."""
         try:
@@ -254,6 +286,13 @@ class OreiPipSizeSelect(OreiCoordinatorEntity, SelectEntity):
             return self._attr_options[val - 1]
         except (IndexError, TypeError):
             return None
+
+    @property
+    def available(self) -> bool:
+        """Return True if PIP size is known."""
+        if not self.coordinator.data:
+            return False
+        return getattr(self.coordinator.data, "pip_size", None) is not None
 
     async def async_select_option(self, option: str) -> None:
         """Select a new PIP size by option label."""
@@ -289,6 +328,13 @@ class OreiPbpModeSelect(OreiCoordinatorEntity, SelectEntity):
         except (IndexError, TypeError):
             return None
 
+    @property
+    def available(self) -> bool:
+        """Return True if PBP mode is known."""
+        if not self.coordinator.data:
+            return False
+        return getattr(self.coordinator.data, "pbp_mode", None) is not None
+
     async def async_select_option(self, option: str) -> None:
         """Change the PBP mode by selecting an option."""
         try:
@@ -322,6 +368,13 @@ class OreiSingleInputSelect(OreiCoordinatorEntity, SelectEntity):
             return f"HDMI {val}"
         except (IndexError, TypeError):
             return None
+
+    @property
+    def available(self) -> bool:
+        """Return True if single-screen input is known."""
+        if not self.coordinator.data:
+            return False
+        return getattr(self.coordinator.data, "single_input", None) is not None
 
     async def async_select_option(self, option: str) -> None:
         """Route the single-screen output to a selected HDMI input."""
@@ -357,6 +410,13 @@ class OreiQuadModeSelect(OreiCoordinatorEntity, SelectEntity):
         except (IndexError, TypeError):
             return None
 
+    @property
+    def available(self) -> bool:
+        """Return True if quad mode is known."""
+        if not self.coordinator.data:
+            return False
+        return getattr(self.coordinator.data, "quad_mode", None) is not None
+
     async def async_select_option(self, option: str) -> None:
         """Change the quad mode by selecting an option."""
         try:
@@ -391,6 +451,13 @@ class OreiTripleModeSelect(OreiCoordinatorEntity, SelectEntity):
             return self._attr_options[val - 1]
         except (IndexError, TypeError):
             return None
+
+    @property
+    def available(self) -> bool:
+        """Return True if triple mode is known."""
+        if not self.coordinator.data:
+            return False
+        return getattr(self.coordinator.data, "triple_mode", None) is not None
 
     async def async_select_option(self, option: str) -> None:
         """Change the triple mode by selecting an option."""
