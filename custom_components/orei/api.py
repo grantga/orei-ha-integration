@@ -10,6 +10,7 @@ exceptions on failure so the rest of the integration can react.
 from __future__ import annotations
 
 import asyncio
+import re
 from typing import Any
 
 import serial
@@ -703,13 +704,12 @@ class OreiMatrixClient:
 
         """
         LOGGER.debug("get_window_input(): querying window=%s", window)
-        if not 0 <= window <= NUM_WINDOWS:
-            msg = f"Window must be between 0 and {NUM_WINDOWS}"
+        # Only single-window queries are supported here (1..NUM_WINDOWS).
+        if not 1 <= window <= NUM_WINDOWS:
+            msg = f"Window must be between 1 and {NUM_WINDOWS}"
             LOGGER.debug("get_window_input(): invalid window %s", window)
             raise OreiMatrixError(msg)
 
-        # 0 means ALL — device may reply with multiple lines; for simplicity
-        # request a single window when calling from the coordinator/UI.
         cmd = CMD_QUERY_WINDOW_INPUT.format(win=window)
         response = await self._write_and_read(cmd)
         resp = response.lower().strip()
@@ -720,6 +720,22 @@ class OreiMatrixClient:
             return None
 
         # Example textual response: "window 1 select HDMI 1"
+        # Prefer an explicit 'hdmi N' match so we don't accidentally pick the
+        # window number that also appears in the response. If that fails,
+        # fall back to scanning numeric tokens but prefer the last valid
+        # numeric value (likely the selected input) instead of the first.
+        m = re.search(r"hdmi\s*(\d+)", resp)
+        if m:
+            try:
+                val = int(m.group(1))
+            except ValueError:
+                val = None
+            if val is not None and 1 <= val <= NUM_INPUTS:
+                LOGGER.debug("get_window_input(): parsed explicit HDMI value=%s", val)
+                return val
+
+        # Fallback: prefer the last numeric token within range
+        last_val: int | None = None
         for token in resp.split():
             digits = "".join(ch for ch in token if ch.isdigit())
             if not digits:
@@ -729,8 +745,11 @@ class OreiMatrixClient:
             except ValueError:
                 continue
             if 1 <= val <= NUM_INPUTS:
-                LOGGER.debug("get_window_input(): parsed value=%s", val)
-                return val
+                last_val = val
+
+        if last_val is not None:
+            LOGGER.debug("get_window_input(): parsed fallback value=%s", last_val)
+            return last_val
 
         msg = f"Invalid window input response: {response}"
         LOGGER.debug("get_window_input(): parse failed: %s", response)
