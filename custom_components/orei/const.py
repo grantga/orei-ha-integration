@@ -98,11 +98,6 @@ CMD_QUERY_TRIPLE_MODE = "r triple mode!\r\n"
 TRIPLE_MODE_MIN = 1
 TRIPLE_MODE_MAX = 2
 
-# Single-screen input routing (single view)
-# Set single-screen input: s in source{src}!  (1..NUM_INPUTS)
-# Query single-screen input: r in source!
-CMD_SET_SINGLE_INPUT = "s in source {src}!\r\n"
-CMD_QUERY_SINGLE_INPUT = "r in source!\r\n"
 
 # Quad display mode commands
 # Set quad mode: s quad mode {mode}!  (1..2)
