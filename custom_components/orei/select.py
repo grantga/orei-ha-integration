@@ -6,7 +6,14 @@ from typing import TYPE_CHECKING
 
 from homeassistant.components.select import SelectEntity
 
-from .const import DOMAIN, NUM_INPUTS, NUM_WINDOWS, QUAD_MODE_MAX, TRIPLE_MODE_MAX
+from .const import (
+    DOMAIN,
+    LOGGER,
+    NUM_INPUTS,
+    NUM_WINDOWS,
+    QUAD_MODE_MAX,
+    TRIPLE_MODE_MAX,
+)
 from .coordinator import OreiCoordinatorEntity, OreiDataUpdateCoordinator
 
 if TYPE_CHECKING:
@@ -117,27 +124,72 @@ class OreiWindowSelect(OreiCoordinatorEntity, SelectEntity):
         self._attr_name = f"Window {window} Input"
         self._attr_icon = "mdi:television-classic"
         self._attr_options = [f"HDMI {i}" for i in range(1, NUM_INPUTS + 1)]
+        LOGGER.debug(
+            "OreiWindowSelect.__init__: created for window=%s with options=%s",
+            window,
+            self._attr_options,
+        )
 
     @property
     def current_option(self) -> str | None:
         """Return the current HDMI input for this window as a string."""
         if not self.coordinator.data:
+            LOGGER.debug(
+                "OreiWindowSelect.current_option: no coordinator data for window=%s",
+                self._window,
+            )
             return None
         try:
             val = self.coordinator.data.window_inputs[self._window - 1]
         except (IndexError, TypeError):
+            LOGGER.debug(
+                "OreiWindowSelect.current_option: index error for window=%s",
+                self._window,
+            )
             return None
         if val is None:
+            LOGGER.debug(
+                "OreiWindowSelect.current_option: window %s value is None", self._window
+            )
             return None
+        LOGGER.debug(
+            "OreiWindowSelect.current_option: window=%s -> HDMI %s",
+            self._window,
+            val,
+        )
         return f"HDMI {val}"
 
     async def async_select_option(self, option: str) -> None:
         """Select an HDMI input for this window."""
+        LOGGER.debug(
+            "OreiWindowSelect.async_select_option: called for window=%s with option=%s",
+            self._window,
+            option,
+        )
         try:
             idx = int(option.split()[-1])
-        except (ValueError, IndexError):
+        except (ValueError, IndexError) as exc:
+            LOGGER.debug(
+                "OreiWindowSelect.async_select_option: failed to parse option '%s' for"
+                " window=%s: %s",
+                option,
+                self._window,
+                exc,
+            )
             return
+
+        LOGGER.debug(
+            "OreiWindowSelect.async_select_option: parsed idx=%s for window=%s",
+            idx,
+            self._window,
+        )
         await self.coordinator.client.set_window_input(self._window, idx)
+        LOGGER.debug(
+            "OreiWindowSelect.async_select_option: set_window_input called for"
+            " window=%s -> HDMI %s",
+            self._window,
+            idx,
+        )
         await self.coordinator.async_request_refresh()
 
 
