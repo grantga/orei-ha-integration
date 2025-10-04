@@ -116,9 +116,9 @@ set_pbp_mode:
         select:
           options:
             - value: "1"
-              label: "PBP mode 1"
+              label: "Mode 1"
             - value: "2"
-              label: "PBP mode 2"
+              label: "Mode 2"
     entry_id:
       description: "Optional config entry ID when multiple OREI devices are configured."
       example: "abcdef1234567890"
@@ -150,9 +150,9 @@ set_triple_mode:
         select:
           options:
             - value: "1"
-              label: "Triple mode 1"
+              label: "Mode 1"
             - value: "2"
-              label: "Triple mode 2"
+              label: "Mode 2"
     entry_id:
       description: "Optional config entry ID when multiple OREI devices are configured."
       example: "abcdef1234567890"
